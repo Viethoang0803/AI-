@@ -32,15 +32,42 @@
       body {
         margin: 0;
         overflow: hidden;
-        background: radial-gradient(
-          circle at 50% 50%,
-          #0d1117 0%,
-          #000000 100%
-        );
+        background: #000;
         font-family: "Inter", sans-serif;
         color: white;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
+        touch-action: none;
+      }
+
+      #webcam-feed {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1);
+        z-index: 0;
+        background: #111;
+      }
+
+      #webcam-dim {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0.08) 0%,
+          rgba(0, 0, 0, 0.35) 100%
+        );
+      }
+
+      canvas {
+        position: fixed !important;
+        inset: 0;
+        z-index: 2;
+        display: block;
       }
 
       #info {
@@ -52,6 +79,7 @@
         pointer-events: none;
         z-index: 10;
         max-width: 90%;
+        text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
       }
 
 
@@ -99,6 +127,7 @@
         z-index: 10;
         pointer-events: none;
         max-width: 40%;
+        text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
       }
 
       #shape-label {
@@ -120,27 +149,27 @@
         word-break: break-word;
       }
 
-
-        display: block;
+      #status-hint {
         position: absolute;
-        bottom: 15px;
-        right: 15px;
-        width: clamp(120px, 30vw, 240px);
-        height: auto;
-        border-radius: 8px;
-        border: 2px solid rgba(255, 255, 255, 0.5);
-        transform: scaleX(-1);
-        z-index: 5;
-        background: #222;
-        transition: all 0.3s ease;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        z-index: 10;
+        font-size: clamp(0.58rem, 2.2vw, 0.72rem);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.75);
+        pointer-events: none;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
+        white-space: nowrap;
       }
-
 
       #loading {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
+        z-index: 20;
         color: var(--accent);
         letter-spacing: 1px;
         font-size: clamp(0.7rem, 3vw, 0.9rem);
@@ -148,6 +177,7 @@
         text-align: center;
         padding: 0 20px;
         width: 80%;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
       }
 
 
@@ -160,12 +190,6 @@
         #shape-display {
           top: 15px;
           right: 15px;
-        }
-
-        #webcam-feed {
-          bottom: 10px;
-          right: 10px;
-          width: clamp(100px, 25vw, 180px);
         }
 
         #info p {
@@ -182,13 +206,6 @@
         #shape-display {
           top: 12px;
           right: 12px;
-        }
-
-        #webcam-feed {
-          bottom: 8px;
-          right: 8px;
-          width: clamp(90px, 22vw, 150px);
-          border-radius: 6px;
         }
 
         #info h1 {
@@ -240,12 +257,6 @@
           right: 10px;
         }
 
-        #webcam-feed {
-          bottom: 5px;
-          right: 5px;
-          width: 100px;
-        }
-
         #loading {
           font-size: 0.6rem;
         }
@@ -253,10 +264,13 @@
     </style>
   </head>
   <body>
+    <video id="webcam-feed" autoplay playsinline muted></video>
+    <div id="webcam-dim"></div>
+
     <div id="info">
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
-        👋 DI CHUYỂN → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
+        👋 <b>NGỬA TAY</b> → <span style="opacity: 0.6">HÌNH NẰM TRÊN TAY</span><br />
         🤏 <b>CHỤM</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
         ✊ <b>NẮM TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
         🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
@@ -268,9 +282,9 @@
       <div id="shape-label">Hình hiện tại</div>
       <div id="current-shape-name">Quả cầu</div>
     </div>
-    
+
+    <div id="status-hint">Ngửa lòng bàn tay vào khung hình</div>
     <div id="loading">Đang khởi tạo…</div>
-    <video id="webcam-feed" autoplay playsinline></video>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -306,8 +320,16 @@
       let isFist = false;
       let isOpenPalm = false;
       let isFrozen = false;
+      let handDetected = false;
 
       let lastPinchTime = 0;
+
+      // Palm overlay (keep original Hand-Sync visuals)
+      const palmPos = new THREE.Vector3();
+      const palmPosTarget = new THREE.Vector3();
+      let palmScale = 0.38;
+      let palmScaleTarget = 0.38;
+      const statusHint = document.getElementById("status-hint");
 
       // --- Scene Setup ---
       const scene = new THREE.Scene();
@@ -320,7 +342,7 @@
       camera.position.z = 10;
 
       const renderer = new THREE.WebGLRenderer({
-        antialias: !isMobile, // Disable antialias on mobile for performance
+        antialias: !isMobile,
         alpha: true,
         powerPreference: "high-performance",
       });
@@ -328,6 +350,7 @@
         Math.min(window.devicePixelRatio, isMobile ? 1 : 2)
       );
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
       function createHardCircleTexture() {
@@ -462,6 +485,36 @@
         lastPinchTime = now;
       }
 
+      function landmarkToWorld(x, y, out) {
+        // Mirrored fullscreen webcam → NDC → world at z≈0
+        const ndcX = (1 - x) * 2 - 1;
+        const ndcY = (1 - y) * 2 - 1;
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const dist = camera.position.z;
+        const visibleH = 2 * Math.tan(vFOV / 2) * dist;
+        const visibleW = visibleH * camera.aspect;
+        out.set(ndcX * (visibleW * 0.5), ndcY * (visibleH * 0.5), 0.2);
+      }
+
+      function updatePalmFromLandmarks(lm) {
+        // Palm center (toward middle of hand)
+        const cx =
+          (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5 * 0.4 +
+          lm[9].x * 0.6;
+        const cy =
+          (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5 * 0.4 +
+          lm[9].y * 0.6;
+        landmarkToWorld(cx, cy, palmPosTarget);
+
+        // Fit original Hand-Sync formation (~radius 4) into the palm
+        const span = Math.hypot(lm[5].x - lm[17].x, lm[5].y - lm[17].y);
+        palmScaleTarget = THREE.MathUtils.clamp(
+          THREE.MathUtils.mapLinear(span, 0.08, 0.28, 0.28, 0.52),
+          0.26,
+          0.58
+        );
+      }
+
       // --- Hand Tracking ---
       const videoElement = document.getElementById("webcam-feed");
       const hands = new Hands({
@@ -471,7 +524,7 @@
 
       hands.setOptions({
         maxNumHands: 1,
-        modelComplexity: isMobile ? 0 : 1, // Lower complexity on mobile
+        modelComplexity: isMobile ? 0 : 1,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6,
       });
@@ -483,6 +536,8 @@
           results.multiHandLandmarks.length > 0
         ) {
           const lm = results.multiHandLandmarks[0];
+          handDetected = true;
+          updatePalmFromLandmarks(lm);
 
           handX = (1 - lm[8].x) * 2 - 1;
           handY = (1 - lm[8].y) * 2 - 1;
@@ -498,7 +553,6 @@
 
           isFist = isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
           isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
-          // All fingers extended = open palm → shrink
           isOpenPalm =
             !isIndexDown &&
             !isMiddleDown &&
@@ -506,27 +560,20 @@
             !isPinkyDown &&
             !isPinching;
 
-          if (isFrozen) {
-            videoElement.style.borderColor = "var(--freeze)";
-            videoElement.style.boxShadow = "none";
-          } else if (isPinching) {
-            videoElement.style.borderColor = "var(--morph)";
-            videoElement.style.boxShadow = "none";
-          } else if (isFist) {
-            videoElement.style.borderColor = "var(--accent)";
-            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
-          } else if (isOpenPalm) {
-            videoElement.style.borderColor = "var(--shrink)";
-            videoElement.style.boxShadow = "0 0 24px rgba(74, 222, 128, 0.45)";
-          } else {
-            videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
-            videoElement.style.boxShadow = "none";
-          }
+          if (isFrozen) statusHint.textContent = "Đóng băng";
+          else if (isPinching) statusHint.textContent = "Đổi hình…";
+          else if (isFist) statusHint.textContent = "Phóng to · trên lòng bàn tay";
+          else if (isOpenPalm) statusHint.textContent = "Thu nhỏ · trên lòng bàn tay";
+          else statusHint.textContent = "Hình đang nằm trên lòng bàn tay";
         } else {
+          handDetected = false;
           isFist = false;
           isOpenPalm = false;
           isFrozen = false;
           isPinching = false;
+          palmPosTarget.set(0, 0, 0);
+          palmScaleTarget = 0.38;
+          statusHint.textContent = "Ngửa lòng bàn tay vào khung hình";
         }
       });
 
@@ -542,6 +589,7 @@
       // --- Animation Loop ---
       const clock = new THREE.Clock();
       const colorObj = new THREE.Color();
+      const tmpScale = new THREE.Vector3();
 
       function animate() {
         requestAnimationFrame(animate);
@@ -549,15 +597,23 @@
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
-        if (!isFrozen) {
-          particles.rotation.y += 0.003 + handX * 0.04;
-          particles.rotation.x += handY * 0.02;
+        // Nest formation onto the palm (fullscreen webcam behind)
+        palmPos.lerp(palmPosTarget, 0.3);
+        palmScale += (palmScaleTarget - palmScale) * 0.18;
+        particles.position.copy(palmPos);
 
-          // Fist expands, open palm shrinks, otherwise normal size
-          let s = 1.0;
-          if (isFist) s = 2.2;
-          else if (isOpenPalm) s = 0.45;
-          particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
+        if (!isFrozen) {
+          // Gentle spin — keep silhouette readable on the hand
+          particles.rotation.y += 0.002 + handX * 0.02;
+          particles.rotation.x += handY * 0.01;
+
+          // Palm-fit scale × gesture scale (original Hand-Sync fist/open behavior)
+          let gesture = 1.0;
+          if (isFist) gesture = 1.75;
+          else if (isOpenPalm) gesture = 0.55;
+          const s = palmScale * gesture * (handDetected ? 1 : 0.85);
+          tmpScale.set(s, s, s);
+          particles.scale.lerp(tmpScale, 0.14);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
