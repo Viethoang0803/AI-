@@ -26,48 +26,21 @@
         --accent: #00f2ff;
         --freeze: #ff4d4d;
         --morph: #a855f7;
-        --shrink: #4ade80;
       }
 
       body {
         margin: 0;
         overflow: hidden;
-        background: #000;
+        background: radial-gradient(
+          circle at 50% 50%,
+          #0d1117 0%,
+          #000000 100%
+        );
         font-family: "Inter", sans-serif;
         color: white;
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
         touch-action: none;
-      }
-
-      #webcam-feed {
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transform: scaleX(-1);
-        z-index: 0;
-        background: #111;
-      }
-
-      #webcam-dim {
-        position: fixed;
-        inset: 0;
-        z-index: 1;
-        pointer-events: none;
-        background: radial-gradient(
-          ellipse at center,
-          rgba(0, 0, 0, 0.08) 0%,
-          rgba(0, 0, 0, 0.35) 100%
-        );
-      }
-
-      canvas {
-        position: fixed !important;
-        inset: 0;
-        z-index: 2;
-        display: block;
       }
 
       #info {
@@ -79,9 +52,7 @@
         pointer-events: none;
         z-index: 10;
         max-width: 90%;
-        text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
       }
-
 
       #info h1 {
         font-weight: 700;
@@ -97,7 +68,6 @@
         text-shadow: 0 0 20px rgba(103, 108, 108, 0.4);
         line-height: 1.2;
       }
-
 
       #info p {
         font-size: clamp(0.55rem, 2.5vw, 0.75rem);
@@ -118,7 +88,6 @@
         font-size: 0.9em;
       }
 
-      /* Shape display - responsive positioning */
       #shape-display {
         position: absolute;
         top: 20px;
@@ -127,7 +96,6 @@
         z-index: 10;
         pointer-events: none;
         max-width: 40%;
-        text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
       }
 
       #shape-label {
@@ -149,19 +117,19 @@
         word-break: break-word;
       }
 
-      #status-hint {
+      #webcam-feed {
+        display: block;
         position: absolute;
-        left: 50%;
-        bottom: 18px;
-        transform: translateX(-50%);
-        z-index: 10;
-        font-size: clamp(0.58rem, 2.2vw, 0.72rem);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.75);
-        pointer-events: none;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.75);
-        white-space: nowrap;
+        bottom: 15px;
+        right: 15px;
+        width: clamp(120px, 30vw, 240px);
+        height: auto;
+        border-radius: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        transform: scaleX(-1);
+        z-index: 5;
+        background: #222;
+        transition: all 0.3s ease;
       }
 
       #loading {
@@ -169,7 +137,6 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        z-index: 20;
         color: var(--accent);
         letter-spacing: 1px;
         font-size: clamp(0.7rem, 3vw, 0.9rem);
@@ -177,9 +144,8 @@
         text-align: center;
         padding: 0 20px;
         width: 80%;
-        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
+        z-index: 20;
       }
-
 
       @media (max-width: 768px) {
         #info {
@@ -190,6 +156,12 @@
         #shape-display {
           top: 15px;
           right: 15px;
+        }
+
+        #webcam-feed {
+          bottom: 10px;
+          right: 10px;
+          width: clamp(100px, 25vw, 180px);
         }
 
         #info p {
@@ -208,6 +180,13 @@
           right: 12px;
         }
 
+        #webcam-feed {
+          bottom: 8px;
+          right: 8px;
+          width: clamp(90px, 22vw, 150px);
+          border-radius: 6px;
+        }
+
         #info h1 {
           margin-bottom: 10px;
           letter-spacing: 0.5px;
@@ -218,7 +197,6 @@
         }
       }
 
-  
       @media (max-width: 320px) {
         #info p {
           font-size: 0.5rem;
@@ -234,7 +212,6 @@
         }
       }
 
-      
       @media (max-height: 500px) and (orientation: landscape) {
         #info {
           top: 10px;
@@ -257,6 +234,12 @@
           right: 10px;
         }
 
+        #webcam-feed {
+          bottom: 5px;
+          right: 5px;
+          width: 100px;
+        }
+
         #loading {
           font-size: 0.6rem;
         }
@@ -264,13 +247,10 @@
     </style>
   </head>
   <body>
-    <video id="webcam-feed" autoplay playsinline muted></video>
-    <div id="webcam-dim"></div>
-
     <div id="info">
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
-        👋 <b>DI CHUYỂN TAY</b> → <span style="opacity: 0.6">XOAY HÌNH</span><br />
+        👋 <b>DI CHUYỂN</b> → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
         🤏 <b>CHỤM</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
@@ -281,8 +261,8 @@
       <div id="current-shape-name">Quả cầu</div>
     </div>
 
-    <div id="status-hint">Ngửa lòng bàn tay vào khung hình</div>
     <div id="loading">Đang khởi tạo…</div>
+    <video id="webcam-feed" autoplay playsinline muted></video>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -296,7 +276,6 @@
     ></script>
 
     <script>
-    
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const PARTICLE_COUNT = isMobile ? 10000 : 20000;
 
@@ -316,19 +295,8 @@
         handY = 0;
       let isPinching = false;
       let isFrozen = false;
-      let handDetected = false;
-
       let lastPinchTime = 0;
 
-      // Palm overlay — fixed size, hand controls view angle
-      const palmPos = new THREE.Vector3();
-      const palmPosTarget = new THREE.Vector3();
-      const FIXED_SCALE = 0.46;
-      const statusHint = document.getElementById("status-hint");
-      const colorObj = new THREE.Color();
-      const rotTarget = new THREE.Euler();
-
-      // --- Scene Setup ---
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         60,
@@ -347,7 +315,6 @@
         Math.min(window.devicePixelRatio, isMobile ? 1 : 2)
       );
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
       function createHardCircleTexture() {
@@ -391,10 +358,9 @@
       });
 
       const particles = new THREE.Points(geometry, material);
-      particles.scale.setScalar(FIXED_SCALE);
+      particles.scale.set(1, 1, 1);
       scene.add(particles);
 
-      // --- Shapes Math ---
       const shapes = {
         sphere: (i) => {
           const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
@@ -483,27 +449,6 @@
         lastPinchTime = now;
       }
 
-      function landmarkToWorld(x, y, out) {
-        const ndcX = (1 - x) * 2 - 1;
-        const ndcY = (1 - y) * 2 - 1;
-        const vFOV = THREE.MathUtils.degToRad(camera.fov);
-        const dist = camera.position.z;
-        const visibleH = 2 * Math.tan(vFOV / 2) * dist;
-        const visibleW = visibleH * camera.aspect;
-        out.set(ndcX * (visibleW * 0.5), ndcY * (visibleH * 0.5), 0.2);
-      }
-
-      function updatePalmFromLandmarks(lm) {
-        const cx =
-          (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5 * 0.4 +
-          lm[9].x * 0.6;
-        const cy =
-          (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5 * 0.4 +
-          lm[9].y * 0.6;
-        landmarkToWorld(cx, cy, palmPosTarget);
-      }
-
-      // --- Hand Tracking ---
       const videoElement = document.getElementById("webcam-feed");
       const hands = new Hands({
         locateFile: (file) =>
@@ -524,8 +469,6 @@
           results.multiHandLandmarks.length > 0
         ) {
           const lm = results.multiHandLandmarks[0];
-          handDetected = true;
-          updatePalmFromLandmarks(lm);
 
           handX = (1 - lm[8].x) * 2 - 1;
           handY = (1 - lm[8].y) * 2 - 1;
@@ -541,17 +484,21 @@
 
           isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
 
-          if (isFrozen) statusHint.textContent = "Đóng băng";
-          else if (isPinching) statusHint.textContent = "Đổi hình…";
-          else statusHint.textContent = "Di chuyển tay để xoay · tốc độ chậm";
+          if (isFrozen) {
+            videoElement.style.borderColor = "var(--freeze)";
+            videoElement.style.boxShadow = "none";
+          } else if (isPinching) {
+            videoElement.style.borderColor = "var(--morph)";
+            videoElement.style.boxShadow = "none";
+          } else {
+            videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
+            videoElement.style.boxShadow = "none";
+          }
         } else {
-          handDetected = false;
           isFrozen = false;
           isPinching = false;
-          handX = 0;
-          handY = 0;
-          palmPosTarget.set(0, 0, 0);
-          statusHint.textContent = "Ngửa lòng bàn tay vào khung hình";
+          handX *= 0.9;
+          handY *= 0.9;
         }
       });
 
@@ -564,24 +511,25 @@
       });
       cameraUtils.start();
 
-      // --- Animation Loop ---
+      const clock = new THREE.Clock();
+      const colorObj = new THREE.Color();
+      const rotTarget = { x: 0, y: 0 };
+
       function animate() {
         requestAnimationFrame(animate);
+        const time = clock.getElapsedTime();
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
-        palmPos.lerp(palmPosTarget, 0.28);
-        particles.position.copy(palmPos);
-        particles.scale.setScalar(FIXED_SCALE);
-
         if (!isFrozen) {
-          // Absolute angle from hand position — slow, easy to aim a view
-          rotTarget.y = handX * 1.15;
-          rotTarget.x = handY * 0.85;
-          particles.rotation.y +=
-            (rotTarget.y - particles.rotation.y) * 0.045;
-          particles.rotation.x +=
-            (rotTarget.x - particles.rotation.x) * 0.045;
+          // Slow, aimable rotation from hand position
+          rotTarget.y = handX * 1.2;
+          rotTarget.x = handY * 0.9;
+          particles.rotation.y += (rotTarget.y - particles.rotation.y) * 0.04;
+          particles.rotation.x += (rotTarget.x - particles.rotation.x) * 0.04;
+          particles.rotation.y += 0.0015;
+
+          particles.scale.set(1, 1, 1);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
@@ -592,7 +540,14 @@
             posAttr.array[ix + 2] +=
               (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
 
-            // Original Hand-Sync color (hand + depth)
+            if (currentShape !== "fireworks") {
+              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.005;
+              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.005;
+            } else {
+              posAttr.array[ix + 1] -= 0.02;
+              if (posAttr.array[ix + 1] < -6) posAttr.array[ix + 1] = 6;
+            }
+
             const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
             const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
             colorObj.setHSL(hue, 0.8, 0.6);
@@ -613,7 +568,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
       });
 
-   
       document.addEventListener(
         "touchmove",
         function (e) {
