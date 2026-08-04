@@ -2,8 +2,6 @@
 
 Ứng dụng hạt 3D điều khiển bằng cử chỉ tay qua webcam (Three.js + MediaPipe Hands).
 
-Hình hạt được **lồng vào lòng bàn tay** trên nền webcam toàn màn hình.
-
 Dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talhahSalman/Hand-Sync-3D-Particle-System).
 
 ## Dùng trên điện thoại
@@ -12,13 +10,13 @@ Dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talha
 
 1. Mở link trên Chrome hoặc Safari  
 2. Cho phép quyền **camera**  
-3. Đưa tay vào khung — hình hạt sẽ nằm trên lòng bàn tay  
+3. Đưa tay vào khung hình  
 
 ## Cử chỉ
 
 | Cử chỉ | Hành động |
 |--------|-----------|
-| Ngửa lòng bàn tay (hướng camera) | Hình nằm trên lòng bàn tay |
+| Di chuyển tay | Xoay & đổi màu |
 | Chụm ngón | Đổi hình (~4 giây/lần) |
 | Nắm tay | Phóng to |
 | Xòe lòng bàn tay | Thu nhỏ |
@@ -26,7 +24,7 @@ Dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talha
 
 ## Các hình
 
-Quả cầu · Trái tim · Sao Thổ · Bông hoa · Ngôi sao · Torus · Lập phương · Vô cực · Xoắn ốc · ADN · Pháo hoa
+Quả cầu · Trái tim · Sao Thổ · Bông hoa · Pháo hoa
 
 ## Chạy local
 
