@@ -20,7 +20,8 @@ Cần HTTPS (GitHub Pages) để webcam hoạt động trên mobile.
 |--------|-----------|
 | Di chuyển tay | Xoay vật thể & đổi màu |
 | Chụm ngón (pinch) | Đổi shape (cooldown ~4 giây) |
-| Nắm tay (fist) | Phóng to bán kính hạt |
+| Nắm tay (fist) | Phóng to |
+| Xòe lòng bàn tay (open palm) | Thu nhỏ |
 | Giơ 1 ngón | Đóng băng animation |
 
 ## Các hình

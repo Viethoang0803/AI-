@@ -26,6 +26,7 @@
         --accent: #00f2ff;
         --freeze: #ff4d4d;
         --morph: #a855f7;
+        --shrink: #4ade80;
       }
 
       body {
@@ -282,7 +283,8 @@
       <p>
         👋 MOVE TO <span style="opacity: 0.6">ROTATE & COLOR</span><br />
         🤏 <b>PINCH</b> TO <span style="opacity: 0.6">MORPH SHAPE</span><br />
-        ✊ <b>FIST</b> TO <span style="opacity: 0.6">EXPAND RADIUS</span><br />
+        ✊ <b>FIST</b> TO <span style="opacity: 0.6">EXPAND</span><br />
+        🖐️ <b>OPEN PALM</b> TO <span style="opacity: 0.6">SHRINK</span><br />
         ☝️ <b>1 FINGER</b> TO <span style="opacity: 0.6">FREEZE MESH</span>
       </p>
     </div>
@@ -292,7 +294,7 @@
       <div id="current-shape-name">Sphere</div>
     </div>
     
-<div id="credit">Created by Talha Salman</div>
+<div id="credit">Created by Viethoang0803</div>
     
     <div id="loading">Initializing Neural Mesh...</div>
     <video id="webcam-feed" autoplay playsinline></video>
@@ -322,6 +324,7 @@
         handY = 0;
       let isPinching = false;
       let isFist = false;
+      let isOpenPalm = false;
       let isFrozen = false;
 
       let lastPinchTime = 0;
@@ -514,18 +517,35 @@
 
           isFist = isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
           isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+          // All fingers extended = open palm → shrink
+          isOpenPalm =
+            !isIndexDown &&
+            !isMiddleDown &&
+            !isRingDown &&
+            !isPinkyDown &&
+            !isPinching;
 
           if (isFrozen) {
             videoElement.style.borderColor = "var(--freeze)";
+            videoElement.style.boxShadow = "none";
           } else if (isPinching) {
             videoElement.style.borderColor = "var(--morph)";
+            videoElement.style.boxShadow = "none";
           } else if (isFist) {
             videoElement.style.borderColor = "var(--accent)";
             videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
+          } else if (isOpenPalm) {
+            videoElement.style.borderColor = "var(--shrink)";
+            videoElement.style.boxShadow = "0 0 24px rgba(74, 222, 128, 0.45)";
           } else {
             videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
             videoElement.style.boxShadow = "none";
           }
+        } else {
+          isFist = false;
+          isOpenPalm = false;
+          isFrozen = false;
+          isPinching = false;
         }
       });
 
@@ -552,7 +572,10 @@
           particles.rotation.y += 0.003 + handX * 0.04;
           particles.rotation.x += handY * 0.02;
 
-          const s = isFist ? 2.2 : 1.0;
+          // Fist expands, open palm shrinks, otherwise normal size
+          let s = 1.0;
+          if (isFist) s = 2.2;
+          else if (isOpenPalm) s = 0.45;
           particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
