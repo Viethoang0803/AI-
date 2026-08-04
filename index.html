@@ -26,6 +26,7 @@
         --accent: #00f2ff;
         --freeze: #ff4d4d;
         --morph: #a855f7;
+        --shrink: #4ade80;
       }
 
       body {
@@ -250,8 +251,10 @@
     <div id="info">
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
-        👋 <b>DI CHUYỂN</b> → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
+        👋 <b>DI CHUYỂN</b> → <span style="opacity: 0.6">XOAY</span><br />
         🤏 <b>CHỤM</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
+        ✊ <b>CO 5 NGÓN</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
+        🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -294,8 +297,24 @@
       let handX = 0,
         handY = 0;
       let isPinching = false;
+      let wasPinching = false;
+      let isFist = false;
+      let isOpenPalm = false;
       let isFrozen = false;
       let lastPinchTime = 0;
+      let scaleTarget = 1.0;
+      const colorObj = new THREE.Color();
+      const tmpScale = new THREE.Vector3(1, 1, 1);
+      const rotTarget = { x: 0, y: 0 };
+
+      // Palette locked per shape — only refreshes on pinch morph
+      const shapeHue = {
+        sphere: 0.55,
+        heart: 0.95,
+        saturn: 0.12,
+        flower: 0.82,
+        fireworks: 0.08,
+      };
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
@@ -435,6 +454,24 @@
 
       targetPositions = getTargetPositions(currentShape);
 
+      function applyShapeColors() {
+        const colAttr = particles.geometry.attributes.color;
+        const base = shapeHue[currentShape] || 0.5;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const ix = i * 3;
+          const dist = Math.hypot(
+            targetPositions[ix],
+            targetPositions[ix + 1],
+            targetPositions[ix + 2]
+          );
+          colorObj.setHSL((base + dist * 0.05) % 1, 0.8, 0.6);
+          colAttr.array[ix] = colorObj.r;
+          colAttr.array[ix + 1] = colorObj.g;
+          colAttr.array[ix + 2] = colorObj.b;
+        }
+        colAttr.needsUpdate = true;
+      }
+
       function cycleShape() {
         const now = Date.now();
         if (now - lastPinchTime < 4000) return;
@@ -446,8 +483,11 @@
           shapeNamesVi[currentShape] || currentShape;
 
         targetPositions = getTargetPositions(currentShape);
+        applyShapeColors();
         lastPinchTime = now;
       }
+
+      applyShapeColors();
 
       const videoElement = document.getElementById("webcam-feed");
       const hands = new Hands({
@@ -473,16 +513,38 @@
           handX = (1 - lm[8].x) * 2 - 1;
           handY = (1 - lm[8].y) * 2 - 1;
 
-          const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
-          isPinching = pinchDist < 0.05;
-          if (isPinching) cycleShape();
-
           const isIndexDown = lm[8].y > lm[6].y;
           const isMiddleDown = lm[12].y > lm[10].y;
           const isRingDown = lm[16].y > lm[14].y;
           const isPinkyDown = lm[20].y > lm[18].y;
 
-          isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+          const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+          isPinching = pinchDist < 0.05 && !isIndexDown;
+
+          // Shape morph only on pinch start
+          if (isPinching && !wasPinching) cycleShape();
+          wasPinching = isPinching;
+
+          // Co 5 ngón ↔ xòe tay: scale theo độ mở ngón (không đổi hình)
+          const openness =
+            (Math.hypot(lm[8].x - lm[0].x, lm[8].y - lm[0].y) +
+              Math.hypot(lm[12].x - lm[0].x, lm[12].y - lm[0].y) +
+              Math.hypot(lm[16].x - lm[0].x, lm[16].y - lm[0].y) +
+              Math.hypot(lm[20].x - lm[0].x, lm[20].y - lm[0].y) +
+              Math.hypot(lm[4].x - lm[0].x, lm[4].y - lm[0].y)) /
+            5;
+          if (!isPinching && !isFrozen) {
+            scaleTarget = THREE.MathUtils.clamp(
+              THREE.MathUtils.mapLinear(openness, 0.14, 0.4, 0.4, 1.95),
+              0.38,
+              2.0
+            );
+          }
+
+          isFist = openness < 0.2 && !isPinching;
+          isOpenPalm = openness > 0.34 && !isPinching;
+          isFrozen =
+            !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
 
           if (isFrozen) {
             videoElement.style.borderColor = "var(--freeze)";
@@ -490,6 +552,12 @@
           } else if (isPinching) {
             videoElement.style.borderColor = "var(--morph)";
             videoElement.style.boxShadow = "none";
+          } else if (isFist) {
+            videoElement.style.borderColor = "var(--shrink)";
+            videoElement.style.boxShadow = "0 0 24px rgba(74, 222, 128, 0.45)";
+          } else if (isOpenPalm) {
+            videoElement.style.borderColor = "var(--accent)";
+            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.55)";
           } else {
             videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
             videoElement.style.boxShadow = "none";
@@ -497,6 +565,10 @@
         } else {
           isFrozen = false;
           isPinching = false;
+          wasPinching = false;
+          isFist = false;
+          isOpenPalm = false;
+          scaleTarget = 1.0;
           handX *= 0.9;
           handY *= 0.9;
         }
@@ -512,24 +584,22 @@
       cameraUtils.start();
 
       const clock = new THREE.Clock();
-      const colorObj = new THREE.Color();
-      const rotTarget = { x: 0, y: 0 };
 
       function animate() {
         requestAnimationFrame(animate);
         const time = clock.getElapsedTime();
         const posAttr = particles.geometry.attributes.position;
-        const colAttr = particles.geometry.attributes.color;
 
         if (!isFrozen) {
-          // Slow, aimable rotation from hand position
+          // Slow rotation only from hand movement
           rotTarget.y = handX * 1.2;
           rotTarget.x = handY * 0.9;
           particles.rotation.y += (rotTarget.y - particles.rotation.y) * 0.04;
           particles.rotation.x += (rotTarget.x - particles.rotation.x) * 0.04;
-          particles.rotation.y += 0.0015;
 
-          particles.scale.set(1, 1, 1);
+          // Co 5 ngón → thu nhỏ · Xòe tay → phóng to
+          tmpScale.set(scaleTarget, scaleTarget, scaleTarget);
+          particles.scale.lerp(tmpScale, 0.12);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
@@ -547,16 +617,8 @@
               posAttr.array[ix + 1] -= 0.02;
               if (posAttr.array[ix + 1] < -6) posAttr.array[ix + 1] = 6;
             }
-
-            const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
-            const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
-            colorObj.setHSL(hue, 0.8, 0.6);
-            colAttr.array[ix] = colorObj.r;
-            colAttr.array[ix + 1] = colorObj.g;
-            colAttr.array[ix + 2] = colorObj.b;
           }
           posAttr.needsUpdate = true;
-          colAttr.needsUpdate = true;
         }
 
         renderer.render(scene, camera);
