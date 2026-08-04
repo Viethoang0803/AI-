@@ -330,6 +330,8 @@
       let palmScale = 0.38;
       let palmScaleTarget = 0.38;
       const statusHint = document.getElementById("status-hint");
+      const colorObj = new THREE.Color();
+      const tmpScale = new THREE.Vector3();
 
       // --- Scene Setup ---
       const scene = new THREE.Scene();
@@ -383,11 +385,12 @@
       );
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
+      const baseParticleSize = isMobile ? 0.15 : 0.12;
       const material = new THREE.PointsMaterial({
-        size: isMobile ? 0.15 : 0.12,
+        size: baseParticleSize,
         vertexColors: true,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.8,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         map: createHardCircleTexture(),
@@ -395,6 +398,15 @@
 
       const particles = new THREE.Points(geometry, material);
       scene.add(particles);
+
+      // Stable palette per shape — only refreshed on pinch morph
+      const shapeHue = {
+        sphere: 0.55,
+        heart: 0.95,
+        saturn: 0.12,
+        flower: 0.82,
+        fireworks: 0.08,
+      };
 
       // --- Shapes Math ---
       const shapes = {
@@ -471,6 +483,24 @@
 
       targetPositions = getTargetPositions(currentShape);
 
+      function applyShapeColors() {
+        const colAttr = particles.geometry.attributes.color;
+        const base = shapeHue[currentShape] || 0.5;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const ix = i * 3;
+          const dist = Math.hypot(
+            targetPositions[ix],
+            targetPositions[ix + 1],
+            targetPositions[ix + 2]
+          );
+          colorObj.setHSL((base + dist * 0.04) % 1, 0.72, 0.52);
+          colAttr.array[ix] = colorObj.r;
+          colAttr.array[ix + 1] = colorObj.g;
+          colAttr.array[ix + 2] = colorObj.b;
+        }
+        colAttr.needsUpdate = true;
+      }
+
       function cycleShape() {
         const now = Date.now();
         if (now - lastPinchTime < 4000) return;
@@ -482,6 +512,7 @@
           shapeNamesVi[currentShape] || currentShape;
 
         targetPositions = getTargetPositions(currentShape);
+        applyShapeColors();
         lastPinchTime = now;
       }
 
@@ -587,15 +618,11 @@
       cameraUtils.start();
 
       // --- Animation Loop ---
-      const clock = new THREE.Clock();
-      const colorObj = new THREE.Color();
-      const tmpScale = new THREE.Vector3();
+      applyShapeColors();
 
       function animate() {
         requestAnimationFrame(animate);
-        const time = clock.getElapsedTime();
         const posAttr = particles.geometry.attributes.position;
-        const colAttr = particles.geometry.attributes.color;
 
         // Nest formation onto the palm (fullscreen webcam behind)
         palmPos.lerp(palmPosTarget, 0.3);
@@ -603,17 +630,30 @@
         particles.position.copy(palmPos);
 
         if (!isFrozen) {
-          // Gentle spin — keep silhouette readable on the hand
-          particles.rotation.y += 0.002 + handX * 0.02;
+          // Spin only from hand motion (gesture), not a free time drift
+          particles.rotation.y += handX * 0.018;
           particles.rotation.x += handY * 0.01;
 
-          // Palm-fit scale × gesture scale (original Hand-Sync fist/open behavior)
+          // Palm-fit scale × gesture scale
           let gesture = 1.0;
           if (isFist) gesture = 1.75;
           else if (isOpenPalm) gesture = 0.55;
           const s = palmScale * gesture * (handDetected ? 1 : 0.85);
           tmpScale.set(s, s, s);
           particles.scale.lerp(tmpScale, 0.14);
+
+          // Shrink packs particles → AdditiveBlending washes white; dim + smaller dots
+          const shrinkAmt = isOpenPalm ? 1 : 0;
+          const targetOpacity = isOpenPalm ? 0.42 : isFist ? 0.9 : 0.8;
+          const targetSize =
+            baseParticleSize * (isOpenPalm ? 0.55 : isFist ? 1.05 : 1);
+          material.opacity += (targetOpacity - material.opacity) * 0.2;
+          material.size += (targetSize - material.size) * 0.2;
+          // Avoid pure additive wash when tightly packed
+          material.blending =
+            shrinkAmt || particles.scale.x < palmScale * 0.7
+              ? THREE.NormalBlending
+              : THREE.AdditiveBlending;
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
@@ -623,24 +663,8 @@
               (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.08;
             posAttr.array[ix + 2] +=
               (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
-
-            if (currentShape !== "fireworks") {
-              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.005;
-              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.005;
-            } else {
-              posAttr.array[ix + 1] -= 0.02;
-              if (posAttr.array[ix + 1] < -6) posAttr.array[ix + 1] = 6;
-            }
-
-            const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
-            const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
-            colorObj.setHSL(hue, 0.8, 0.6);
-            colAttr.array[ix] = colorObj.r;
-            colAttr.array[ix + 1] = colorObj.g;
-            colAttr.array[ix + 2] = colorObj.b;
           }
           posAttr.needsUpdate = true;
-          colAttr.needsUpdate = true;
         }
 
         renderer.render(scene, camera);
