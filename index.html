@@ -517,34 +517,61 @@
           const isMiddleDown = lm[12].y > lm[10].y;
           const isRingDown = lm[16].y > lm[14].y;
           const isPinkyDown = lm[20].y > lm[18].y;
+          const fingersDown =
+            (isIndexDown ? 1 : 0) +
+            (isMiddleDown ? 1 : 0) +
+            (isRingDown ? 1 : 0) +
+            (isPinkyDown ? 1 : 0);
 
           const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
-          isPinching = pinchDist < 0.05 && !isIndexDown;
+          isPinching = pinchDist < 0.045 && fingersDown <= 1;
 
-          // Shape morph only on pinch start
+          // Đổi hình chỉ khi bắt đầu chụm
           if (isPinching && !wasPinching) cycleShape();
           wasPinching = isPinching;
 
-          // Co 5 ngón ↔ xòe tay: scale theo độ mở ngón (không đổi hình)
-          const openness =
+          // 1 ngón trỏ = đóng băng (không đụng scale)
+          isFrozen =
+            !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+
+          // Co 5 ngón = thu nhỏ · Xòe tay = phóng to
+          // Chuẩn hóa theo bề rộng lòng bàn tay (ổn khi gần/xa camera)
+          const palmW =
+            Math.hypot(lm[5].x - lm[17].x, lm[5].y - lm[17].y) || 0.08;
+          const tipReach =
             (Math.hypot(lm[8].x - lm[0].x, lm[8].y - lm[0].y) +
               Math.hypot(lm[12].x - lm[0].x, lm[12].y - lm[0].y) +
               Math.hypot(lm[16].x - lm[0].x, lm[16].y - lm[0].y) +
               Math.hypot(lm[20].x - lm[0].x, lm[20].y - lm[0].y) +
               Math.hypot(lm[4].x - lm[0].x, lm[4].y - lm[0].y)) /
-            5;
-          if (!isPinching && !isFrozen) {
-            scaleTarget = THREE.MathUtils.clamp(
-              THREE.MathUtils.mapLinear(openness, 0.14, 0.4, 0.4, 1.95),
-              0.38,
-              2.0
-            );
-          }
+            5 /
+            palmW;
 
-          isFist = openness < 0.2 && !isPinching;
-          isOpenPalm = openness > 0.34 && !isPinching;
-          isFrozen =
-            !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+          if (!isPinching && !isFrozen) {
+            if (fingersDown >= 4) {
+              // Nắm / co hết ngón → thu nhỏ rõ
+              isFist = true;
+              isOpenPalm = false;
+              scaleTarget = 0.35;
+            } else if (fingersDown === 0) {
+              // Xòe hết ngón → phóng to rõ
+              isFist = false;
+              isOpenPalm = true;
+              scaleTarget = 2.2;
+            } else {
+              // Trung gian theo độ mở ngón
+              isFist = false;
+              isOpenPalm = false;
+              scaleTarget = THREE.MathUtils.clamp(
+                THREE.MathUtils.mapLinear(tipReach, 1.3, 3.4, 0.45, 2.0),
+                0.35,
+                2.2
+              );
+            }
+          } else {
+            isFist = false;
+            isOpenPalm = false;
+          }
 
           if (isFrozen) {
             videoElement.style.borderColor = "var(--freeze)";
@@ -552,12 +579,12 @@
           } else if (isPinching) {
             videoElement.style.borderColor = "var(--morph)";
             videoElement.style.boxShadow = "none";
-          } else if (isFist) {
+          } else if (isFist || scaleTarget < 0.55) {
             videoElement.style.borderColor = "var(--shrink)";
-            videoElement.style.boxShadow = "0 0 24px rgba(74, 222, 128, 0.45)";
-          } else if (isOpenPalm) {
+            videoElement.style.boxShadow = "0 0 24px rgba(74, 222, 128, 0.5)";
+          } else if (isOpenPalm || scaleTarget > 1.6) {
             videoElement.style.borderColor = "var(--accent)";
-            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.55)";
+            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
           } else {
             videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
             videoElement.style.boxShadow = "none";
@@ -590,16 +617,16 @@
         const time = clock.getElapsedTime();
         const posAttr = particles.geometry.attributes.position;
 
+        // Scale luôn cập nhật (kể cả khi đóng băng hình) để thấy thu/phóng ngay
+        tmpScale.set(scaleTarget, scaleTarget, scaleTarget);
+        particles.scale.lerp(tmpScale, 0.22);
+
         if (!isFrozen) {
           // Slow rotation only from hand movement
           rotTarget.y = handX * 1.2;
           rotTarget.x = handY * 0.9;
           particles.rotation.y += (rotTarget.y - particles.rotation.y) * 0.04;
           particles.rotation.x += (rotTarget.x - particles.rotation.x) * 0.04;
-
-          // Co 5 ngón → thu nhỏ · Xòe tay → phóng to
-          tmpScale.set(scaleTarget, scaleTarget, scaleTarget);
-          particles.scale.lerp(tmpScale, 0.12);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
