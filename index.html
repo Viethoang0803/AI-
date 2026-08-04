@@ -119,33 +119,8 @@
         line-height: 1.2;
         word-break: break-word;
       }
- #credit {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        text-align: left;
-        z-index: 10;
-        pointer-events: none;
-        font-size: clamp(0.6rem, 2.5vw, 0.8rem);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: rgba(255, 255, 255, 0.5);
-        background: rgba(0, 0, 0, 0.2);
-        padding: 4px 10px;
-        border-radius: 20px;
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-      }
-
-      #credit:hover {
-        color: var(--accent);
-        border-color: rgba(0, 242, 255, 0.3);
-        background: rgba(0, 242, 255, 0.05);
-      }
 
 
-      #webcam-feed {
         display: block;
         position: absolute;
         bottom: 15px;
@@ -293,8 +268,6 @@
       <div id="shape-label">Active Formation</div>
       <div id="current-shape-name">Sphere</div>
     </div>
-    
-<div id="credit">Created by Viethoang0803</div>
     
     <div id="loading">Initializing Neural Mesh...</div>
     <video id="webcam-feed" autoplay playsinline></video>
