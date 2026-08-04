@@ -1,16 +1,31 @@
-# Hand Particle Universe
+# Hand-Sync Particle Nexus
 
-Trải nghiệm hạt 3D điều khiển bằng cử chỉ tay (MediaPipe Hands + Three.js).
+Ứng dụng hạt 3D điều khiển bằng cử chỉ tay qua webcam (Three.js + MediaPipe Hands).
+
+Fork / dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talhahSalman/Hand-Sync-3D-Particle-System).
 
 ## Dùng trên điện thoại
 
 **https://viethoang0803.github.io/AI-/**
 
-1. Mở link trên Chrome / Safari  
-2. Nhấn **Enable Camera** và cho phép quyền camera  
+1. Mở link trên Chrome hoặc Safari  
+2. Cho phép quyền **camera**  
 3. Đưa tay vào khung hình  
 
-HTTPS từ GitHub Pages là bắt buộc để webcam hoạt động trên mobile.
+Cần HTTPS (GitHub Pages) để webcam hoạt động trên mobile.
+
+## Cử chỉ
+
+| Cử chỉ | Hành động |
+|--------|-----------|
+| Di chuyển tay | Xoay vật thể & đổi màu |
+| Chụm ngón (pinch) | Đổi shape (cooldown ~4 giây) |
+| Nắm tay (fist) | Phóng to bán kính hạt |
+| Giơ 1 ngón | Đóng băng animation |
+
+## Các hình
+
+Sphere · Heart · Saturn · Flower · Fireworks
 
 ## Chạy local
 
@@ -18,18 +33,15 @@ HTTPS từ GitHub Pages là bắt buộc để webcam hoạt động trên mobil
 python -m http.server 8000
 ```
 
-Mở http://localhost:8000
+Mở http://localhost:8000 rồi cho phép camera.
 
-## Cử chỉ chính
+## Công nghệ
 
-| Cử chỉ | Hành động |
-|--------|-----------|
-| Một tay | Di chuyển / xoay |
-| Vuốt trái / phải | Đổi shape |
-| Vuốt lên / xuống | Tăng / giảm energy |
-| Chụm giữ rồi thả (100%) | Nổ và đổi hình |
-| Hai tay | Phóng to / thu nhỏ |
-| Đếm ngón 0–5 | Đổi màu |
-| Nắm tay / mở lòng | Freeze / resume |
+- Three.js  
+- MediaPipe Hands  
+- GSAP  
+- Một file `index.html` — không cần npm / backend  
 
-Chỉ cần file `index.html` — không backend, không npm.
+## Tác giả
+
+**Viethoang0803** — https://github.com/Viethoang0803/AI-

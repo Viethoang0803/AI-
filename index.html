@@ -1,2095 +1,607 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#050505" />
-  <title>Hand Particle Universe</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #050505;
-      --ink: #f4f1ea;
-      --muted: rgba(244, 241, 234, 0.45);
-      --faint: rgba(244, 241, 234, 0.22);
-      --line: rgba(244, 241, 234, 0.14);
-      --accent: #8fd6d0;
-      --danger: #e07a6a;
-      --panel: rgba(8, 10, 12, 0.72);
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌌</text></svg>"
+    />
+    <title>Hand-Sync Particle Nexus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap"
+      rel="stylesheet"
+    />
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    <style>
+      :root {
+        --glass: rgba(255, 255, 255, 0.03);
+        --glass-heavy: rgba(255, 255, 255, 0.08);
+        --border: rgba(255, 255, 255, 0.15);
+        --accent: #00f2ff;
+        --freeze: #ff4d4d;
+        --morph: #a855f7;
+      }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--ink);
-      font-family: "IBM Plex Sans", system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      touch-action: none;
-      overscroll-behavior: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: radial-gradient(
+          circle at 50% 50%,
+          #0d1117 0%,
+          #000000 100%
+        );
+        font-family: "Inter", sans-serif;
+        color: white;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
 
-    body {
-      background:
-        radial-gradient(ellipse 70% 55% at 50% 42%, #12161c 0%, transparent 58%),
-        radial-gradient(ellipse 50% 40% at 80% 90%, #0a1218 0%, transparent 50%),
-        #050505;
-    }
+      #info {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: auto;
+        text-align: left;
+        pointer-events: none;
+        z-index: 10;
+        max-width: 90%;
+      }
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 3;
-      pointer-events: none;
-      opacity: 0.035;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-size: 180px 180px;
-    }
 
-    body::after {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-      background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
-      transition: opacity 0.4s ease;
-    }
+      #info h1 {
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin: 0;
+        margin-bottom: 15px;
+        font-size: clamp(1.5rem, 6vw, 2.5rem);
+        background: white;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-shadow: 0 0 20px rgba(103, 108, 108, 0.4);
+        line-height: 1.2;
+      }
 
-    #webcam-video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
-      z-index: 0;
-      opacity: 0;
-      pointer-events: none;
-      filter: brightness(0.55) contrast(1.05) saturate(0.8) blur(0.4px);
-      transition: opacity 0.5s ease;
-    }
 
-    #webcam-video.bg-on { opacity: 1; }
+      #info p {
+        font-size: clamp(0.55rem, 2.5vw, 0.75rem);
+        margin-top: 10px;
+        letter-spacing: 1px;
+        line-height: 1.8;
+        text-transform: uppercase;
+        font-weight: 500;
+      }
 
-    #webcam-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      opacity: 0;
-      background:
-        linear-gradient(180deg, rgba(5,5,5,0.55) 0%, rgba(5,5,5,0.25) 35%, rgba(5,5,5,0.35) 100%),
-        radial-gradient(ellipse at center, transparent 30%, rgba(5,5,5,0.55) 100%);
-      transition: opacity 0.5s ease;
-    }
+      #info b {
+        color: var(--accent);
+        background: rgba(0, 242, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 242, 255, 0.2);
+        margin: 0 3px;
+        font-size: 0.9em;
+      }
 
-    #webcam-overlay.bg-on { opacity: 1; }
+      /* Shape display - responsive positioning */
+      #shape-display {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        text-align: right;
+        z-index: 10;
+        pointer-events: none;
+        max-width: 40%;
+      }
 
-    #webgl {
-      position: fixed;
-      inset: 0;
-      z-index: 2;
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+      #shape-label {
+        font-size: clamp(0.5rem, 2vw, 0.7rem);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        opacity: 0.5;
+        margin-bottom: 2px;
+      }
 
-    #landmark-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 5;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      display: none;
-      transform: scaleX(-1);
-    }
+      #current-shape-name {
+        font-size: clamp(1rem, 4vw, 1.5rem);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--accent);
+        text-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
+        line-height: 1.2;
+        word-break: break-word;
+      }
+ #credit {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        text-align: left;
+        z-index: 10;
+        pointer-events: none;
+        font-size: clamp(0.6rem, 2.5vw, 0.8rem);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.2);
+        padding: 4px 10px;
+        border-radius: 20px;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+      }
 
-    #landmark-canvas.on { display: block; }
+      #credit:hover {
+        color: var(--accent);
+        border-color: rgba(0, 242, 255, 0.3);
+        background: rgba(0, 242, 255, 0.05);
+      }
 
-    .ui {
-      position: fixed;
-      z-index: 20;
-      pointer-events: none;
-    }
 
-    .ui button, .ui .clickable { pointer-events: auto; }
+      #webcam-feed {
+        display: block;
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        width: clamp(120px, 30vw, 240px);
+        height: auto;
+        border-radius: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        transform: scaleX(-1);
+        z-index: 5;
+        background: #222;
+        transition: all 0.3s ease;
+      }
 
-    header.brand {
-      top: 0;
-      left: 0;
-      padding:
-        calc(1.5rem + env(safe-area-inset-top, 0px))
-        1.5rem
-        0
-        calc(1.75rem + env(safe-area-inset-left, 0px));
-    }
 
-    header.brand h1 {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-weight: 500;
-      font-size: clamp(1.55rem, 3.2vw, 2.35rem);
-      letter-spacing: 0.12em;
-      color: var(--ink);
-      line-height: 1.05;
-      text-shadow: 0 2px 24px rgba(0,0,0,0.45);
-    }
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--accent);
+        letter-spacing: 1px;
+        font-size: clamp(0.7rem, 3vw, 0.9rem);
+        text-transform: uppercase;
+        text-align: center;
+        padding: 0 20px;
+        width: 80%;
+      }
 
-    header.brand p {
-      margin-top: 0.45rem;
-      font-size: 0.68rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 300;
-    }
 
-    .top-right {
-      top: calc(1.35rem + env(safe-area-inset-top, 0px));
-      right: calc(1.35rem + env(safe-area-inset-right, 0px));
-      display: flex;
-      gap: 0.45rem;
-    }
+      @media (max-width: 768px) {
+        #info {
+          top: 15px;
+          left: 15px;
+        }
 
-    .btn {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--panel);
-      backdrop-filter: blur(10px);
-      color: var(--ink);
-      font-family: inherit;
-      font-size: 0.65rem;
-      font-weight: 500;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      padding: 0.7rem 0.95rem;
-      min-height: 40px;
-      cursor: pointer;
-      transition: border-color 0.25s, color 0.25s, background 0.25s;
-    }
+        #shape-display {
+          top: 15px;
+          right: 15px;
+        }
 
-    .btn:hover { border-color: rgba(244,241,234,0.35); }
-    .btn.on { border-color: rgba(143,214,208,0.5); color: var(--accent); }
+        #webcam-feed {
+          bottom: 10px;
+          right: 10px;
+          width: clamp(100px, 25vw, 180px);
+        }
 
-    .status-panel {
-      left: calc(1.5rem + env(safe-area-inset-left, 0px));
-      bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
-      font-size: 0.62rem;
-      letter-spacing: 0.14em;
-      line-height: 1.7;
-      color: var(--muted);
-      text-transform: uppercase;
-      font-variant-numeric: tabular-nums;
-    }
+        #info p {
+          line-height: 1.6;
+        }
+      }
 
-    .status-panel span.v { color: rgba(244,241,234,0.72); }
+      @media (max-width: 480px) {
+        #info {
+          top: 12px;
+          left: 12px;
+        }
 
-    .context-hint {
-      left: 50%;
-      bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
-      transform: translateX(-50%);
-      font-size: 0.68rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--faint);
-      text-align: center;
-      transition: opacity 0.35s, color 0.35s;
-      white-space: nowrap;
-      max-width: 90vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+        #shape-display {
+          top: 12px;
+          right: 12px;
+        }
 
-    .context-hint.active { color: var(--accent); }
+        #webcam-feed {
+          bottom: 8px;
+          right: 8px;
+          width: clamp(90px, 22vw, 150px);
+          border-radius: 6px;
+        }
 
-    .toast {
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.35s ease, transform 0.35s ease;
-    }
+        #info h1 {
+          margin-bottom: 10px;
+          letter-spacing: 0.5px;
+        }
 
-    .toast.show {
-      opacity: 1;
-      transform: translate(-50%, -54%);
-    }
+        #info p {
+          letter-spacing: 0.8px;
+        }
+      }
 
-    .toast .main {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-size: clamp(1.4rem, 3.5vw, 2.2rem);
-      letter-spacing: 0.14em;
-      color: var(--ink);
-      text-shadow: 0 0 40px rgba(143,214,208,0.25);
-    }
+  
+      @media (max-width: 320px) {
+        #info p {
+          font-size: 0.5rem;
+          line-height: 1.4;
+        }
 
-    .toast .sub {
-      margin-top: 0.35rem;
-      font-size: 0.68rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
+        #shape-label {
+          font-size: 0.45rem;
+        }
 
-    #charge-ring {
-      position: fixed;
-      z-index: 15;
-      width: 96px;
-      height: 96px;
-      pointer-events: none;
-      opacity: 0;
-      transform: translate(-50%, -50%);
-      transition: opacity 0.2s;
-    }
+        #current-shape-name {
+          font-size: 0.9rem;
+        }
+      }
 
-    #charge-ring.visible { opacity: 1; }
+      
+      @media (max-height: 500px) and (orientation: landscape) {
+        #info {
+          top: 10px;
+          left: 10px;
+        }
 
-    #charge-ring svg {
-      width: 100%;
-      height: 100%;
-      transform: rotate(-90deg);
-    }
+        #info h1 {
+          font-size: 1.2rem;
+          margin-bottom: 8px;
+        }
 
-    #charge-ring .track {
-      fill: none;
-      stroke: rgba(244,241,234,0.12);
-      stroke-width: 2;
-    }
+        #info p {
+          font-size: 0.5rem;
+          line-height: 1.3;
+          margin-top: 5px;
+        }
 
-    #charge-ring .fill {
-      fill: none;
-      stroke: var(--accent);
-      stroke-width: 2.5;
-      stroke-linecap: round;
-      filter: drop-shadow(0 0 8px rgba(143,214,208,0.45));
-    }
+        #shape-display {
+          top: 10px;
+          right: 10px;
+        }
 
-    .help-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 40;
-      background: rgba(5,5,5,0.72);
-      backdrop-filter: blur(6px);
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s, visibility 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      pointer-events: none;
-    }
+        #webcam-feed {
+          bottom: 5px;
+          right: 5px;
+          width: 100px;
+        }
 
-    .help-backdrop.open {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
-    .help-panel {
-      width: min(520px, 100%);
-      max-height: min(82vh, 640px);
-      overflow: auto;
-      border: 1px solid var(--line);
-      background: rgba(10, 12, 15, 0.92);
-      padding: 1.6rem 1.7rem 1.4rem;
-      position: relative;
-    }
-
-    .help-panel h2 {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-weight: 500;
-      font-size: 1.55rem;
-      letter-spacing: 0.12em;
-      margin-bottom: 1rem;
-    }
-
-    .help-panel h3 {
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 1.1rem 0 0.45rem;
-    }
-
-    .help-panel table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.78rem;
-      color: var(--muted);
-    }
-
-    .help-panel td {
-      padding: 0.28rem 0.4rem 0.28rem 0;
-      vertical-align: top;
-    }
-
-    .help-panel td:first-child {
-      color: rgba(244,241,234,0.8);
-      width: 42%;
-      white-space: nowrap;
-    }
-
-    .help-close {
-      position: absolute;
-      top: 0.9rem;
-      right: 0.9rem;
-    }
-
-    .gate {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0.9rem;
-      padding: 2rem;
-      text-align: center;
-      background: radial-gradient(ellipse 70% 55% at 50% 45%, rgba(16,20,26,0.94), rgba(5,5,5,0.97));
-      transition: opacity 0.45s, visibility 0.45s;
-    }
-
-    .gate.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
-
-    .gate h2 {
-      font-family: "Cormorant Garamond", Georgia, serif;
-      font-size: clamp(1.8rem, 5vw, 2.6rem);
-      letter-spacing: 0.12em;
-      font-weight: 500;
-    }
-
-    .gate p {
-      max-width: 22rem;
-      font-size: 0.8rem;
-      line-height: 1.55;
-      color: var(--muted);
-      letter-spacing: 0.03em;
-    }
-
-    .gate .err { color: var(--danger); }
-
-    .debug-panel {
-      position: fixed;
-      top: calc(4.2rem + env(safe-area-inset-top, 0px));
-      right: calc(1.2rem + env(safe-area-inset-right, 0px));
-      z-index: 25;
-      width: 220px;
-      padding: 0.75rem 0.85rem;
-      border: 1px solid var(--line);
-      background: rgba(8,10,12,0.85);
-      backdrop-filter: blur(8px);
-      font-size: 0.58rem;
-      letter-spacing: 0.08em;
-      line-height: 1.55;
-      color: var(--muted);
-      text-transform: uppercase;
-      display: none;
-      pointer-events: none;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .debug-panel.on { display: block; }
-
-    #debug-preview {
-      width: 100%;
-      aspect-ratio: 16/10;
-      object-fit: cover;
-      transform: scaleX(-1);
-      margin-bottom: 0.5rem;
-      opacity: 0.85;
-      display: none;
-    }
-
-    #debug-preview.on { display: block; }
-
-    @media (max-width: 640px) {
-      header.brand h1 { font-size: 1.25rem; letter-spacing: 0.08em; }
-      header.brand p { display: none; }
-      .status-panel { font-size: 0.55rem; }
-      .btn { padding: 0.6rem 0.7rem; font-size: 0.58rem; }
-      .context-hint { font-size: 0.58rem; }
-    }
-  </style>
-</head>
-<body>
-  <video id="webcam-video" playsinline webkit-playsinline muted autoplay></video>
-  <div id="webcam-overlay"></div>
-  <canvas id="webgl"></canvas>
-  <canvas id="landmark-canvas"></canvas>
-
-  <div id="charge-ring">
-    <svg viewBox="0 0 96 96">
-      <circle class="track" cx="48" cy="48" r="42" />
-      <circle class="fill" id="chargeFill" cx="48" cy="48" r="42" />
-    </svg>
-  </div>
-
-  <header class="ui brand">
-    <h1>HAND PARTICLE UNIVERSE</h1>
-    <p>Move. Pinch. Expand. Transform.</p>
-  </header>
-
-  <div class="ui top-right">
-    <button class="btn" id="btnWebcam" type="button">Webcam</button>
-    <button class="btn" id="btnHelp" type="button">Help</button>
-    <button class="btn" id="btnReset" type="button">Reset</button>
-  </div>
-
-  <div class="ui status-panel" id="statusPanel">
-    HAND: <span class="v" id="stHand">—</span><br />
-    GESTURE: <span class="v" id="stGesture">IDLE</span><br />
-    SHAPE: <span class="v" id="stShape">SPHERE</span><br />
-    PARTICLES: <span class="v" id="stParticles">3000</span><br />
-    FPS: <span class="v" id="stFps">—</span>
-  </div>
-
-  <div class="ui context-hint" id="contextHint">ALLOW CAMERA TO BEGIN</div>
-
-  <div class="ui toast" id="toast">
-    <div class="main" id="toastMain"></div>
-    <div class="sub" id="toastSub"></div>
-  </div>
-
-  <div class="debug-panel" id="debugPanel">
-    <video id="debug-preview" playsinline muted></video>
-    <div id="debugText"></div>
-  </div>
-
-  <div class="help-backdrop" id="helpBackdrop">
-    <div class="help-panel" role="dialog" aria-label="Help">
-      <button class="btn help-close" id="btnHelpClose" type="button">Close</button>
-      <h2>Controls</h2>
-      <h3>One hand</h3>
-      <table>
-        <tr><td>Move hand</td><td>Move particle object</td></tr>
-        <tr><td>Tilt hand</td><td>Rotate object</td></tr>
-        <tr><td>Swipe right</td><td>Next shape</td></tr>
-        <tr><td>Swipe left</td><td>Previous shape</td></tr>
-        <tr><td>Swipe up</td><td>Increase energy</td></tr>
-        <tr><td>Swipe down</td><td>Decrease energy</td></tr>
-        <tr><td>Make a fist</td><td>Freeze</td></tr>
-        <tr><td>Open palm</td><td>Resume / recenter</td></tr>
-      </table>
-      <h3>Pinch</h3>
-      <table>
-        <tr><td>Pinch and hold</td><td>Charge</td></tr>
-        <tr><td>Release at 100%</td><td>Explode and transform</td></tr>
-      </table>
-      <h3>Two hands</h3>
-      <table>
-        <tr><td>Move apart</td><td>Scale up</td></tr>
-        <tr><td>Move together</td><td>Scale down</td></tr>
-        <tr><td>Rotate hands</td><td>Rotate object</td></tr>
-      </table>
-      <h3>Finger count</h3>
-      <table>
-        <tr><td>0–5 fingers</td><td>Change particle color</td></tr>
-      </table>
-      <h3>Keyboard</h3>
-      <table>
-        <tr><td>← →</td><td>Prev / next shape</td></tr>
-        <tr><td>↑ ↓</td><td>Energy</td></tr>
-        <tr><td>Space</td><td>Explosion</td></tr>
-        <tr><td>R / W / H / D</td><td>Reset / Webcam / Help / Debug</td></tr>
-        <tr><td>0–5 / + −</td><td>Color / Scale</td></tr>
-      </table>
+        #loading {
+          font-size: 0.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">
+      <h1>Nexus Flow</h1>
+      <p>
+        👋 MOVE TO <span style="opacity: 0.6">ROTATE & COLOR</span><br />
+        🤏 <b>PINCH</b> TO <span style="opacity: 0.6">MORPH SHAPE</span><br />
+        ✊ <b>FIST</b> TO <span style="opacity: 0.6">EXPAND RADIUS</span><br />
+        ☝️ <b>1 FINGER</b> TO <span style="opacity: 0.6">FREEZE MESH</span>
+      </p>
     </div>
-  </div>
 
-  <div class="gate" id="gate">
-    <h2>HAND PARTICLE UNIVERSE</h2>
-    <p id="gateMsg">Enable your camera to control the particle universe with hand gestures. Processing stays in your browser.</p>
-    <button class="btn" id="btnStart" type="button">Enable Camera</button>
-  </div>
+    <div id="shape-display">
+      <div id="shape-label">Active Formation</div>
+      <div id="current-shape-name">Sphere</div>
+    </div>
+    
+<div id="credit">Created by Talha Salman</div>
+    
+    <div id="loading">Initializing Neural Mesh...</div>
+    <video id="webcam-feed" autoplay playsinline></video>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
+      crossorigin="anonymous"
+    ></script>
 
-  <script>
-  (() => {
-    "use strict";
+    <script>
+    
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const PARTICLE_COUNT = isMobile ? 10000 : 20000;
 
-    // ============================================================
-    // 1. Configuration
-    // ============================================================
-    const CONFIG = {
-      particleCount: 3000,
-      minParticleCount: 1800,
-      attraction: 0.018,
-      reformAttraction: 0.048,
-      damping: 0.90,
-      noiseStrength: 0.0022,
-      explosionStrength: 0.28,
-      explosionDuration: 900,
-      transformDuration: 1400,
-      chargeDuration: 1200,
-      reformHold: 700,
-      maxScale: 2.2,
-      minScale: 0.55,
-      positionLimit: 2.35,
-      deadZone: 0.035,
-      pinchEnter: 0.28,
-      pinchExit: 0.38,
-      swipeMinDist: 0.14,
-      swipeMaxVert: 0.10,
-      swipeMinMs: 150,
-      swipeMaxMs: 700,
-      swipeCooldown: 900,
-      fingerHoldMs: 380,
-      openPalmHoldMs: 400,
-      fistHoldMs: 280,
-      twoHandSettleMs: 900,
-      gestureCooldown: 450,
-      mediapipeFps: 28,
-      dprCap: 2,
-      camWidth: 1280,
-      camHeight: 720,
-      chargeCirc: 2 * Math.PI * 42,
-    };
+      let currentShape = "sphere";
+      const shapeList = ["sphere", "heart", "saturn", "flower", "fireworks"];
+      let shapeIndex = 0;
 
-    const SHAPE_NAMES = [
-      "sphere", "heart", "torus", "cube", "galaxy",
-      "wave", "dna", "star", "infinity", "flower",
-    ];
+      let targetPositions = [];
+      let handX = 0,
+        handY = 0;
+      let isPinching = false;
+      let isFist = false;
+      let isFrozen = false;
 
-    const COLOR_PALETTES = [
-      { name: "SILVER", a: [0.92, 0.93, 0.95], b: [0.70, 0.74, 0.80] },
-      { name: "CYAN", a: [0.35, 0.90, 0.95], b: [0.70, 0.95, 1.00] },
-      { name: "VIOLET", a: [0.62, 0.38, 0.95], b: [0.85, 0.70, 1.00] },
-      { name: "MAGENTA", a: [0.95, 0.30, 0.70], b: [1.00, 0.65, 0.85] },
-      { name: "AMBER", a: [1.00, 0.72, 0.28], b: [1.00, 0.90, 0.55] },
-      { name: "JADE", a: [0.30, 0.90, 0.65], b: [0.70, 0.98, 0.82] },
-    ];
+      let lastPinchTime = 0;
 
-    const GESTURE = {
-      IDLE: "IDLE",
-      TRACKING_ONE_HAND: "TRACKING_ONE_HAND",
-      TRACKING_TWO_HANDS: "TRACKING_TWO_HANDS",
-      PINCHING: "PINCHING",
-      CHARGING: "CHARGING",
-      CHARGED: "CHARGED",
-      EXPLODING: "EXPLODING",
-      TRANSFORMING: "TRANSFORMING",
-      FROZEN: "FROZEN",
-      COOLDOWN: "COOLDOWN",
-    };
+      // --- Scene Setup ---
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.z = 10;
 
-    // ============================================================
-    // 2. Utility functions
-    // ============================================================
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const lerp = (a, b, t) => a + (b - a) * t;
-    const smoothstep = (e0, e1, x) => {
-      const t = clamp((x - e0) / (e1 - e0), 0, 1);
-      return t * t * (3 - 2 * t);
-    };
-    const dist3 = (ax, ay, az, bx, by, bz) => {
-      const dx = ax - bx, dy = ay - by, dz = az - bz;
-      return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    };
-    const dist2 = (ax, ay, bx, by) => {
-      const dx = ax - bx, dy = ay - by;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-    const now = () => performance.now();
+      const renderer = new THREE.WebGLRenderer({
+        antialias: !isMobile, // Disable antialias on mobile for performance
+        alpha: true,
+        powerPreference: "high-performance",
+      });
+      renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, isMobile ? 1 : 2)
+      );
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
 
-    function seededRandom(seed) {
-      const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
-      return x - Math.floor(x);
-    }
-
-    // ============================================================
-    // 3. UI state
-    // ============================================================
-    const UI = {
-      els: {
-        video: document.getElementById("webcam-video"),
-        overlay: document.getElementById("webcam-overlay"),
-        canvas: document.getElementById("webgl"),
-        landmark: document.getElementById("landmark-canvas"),
-        chargeRing: document.getElementById("charge-ring"),
-        chargeFill: document.getElementById("chargeFill"),
-        stHand: document.getElementById("stHand"),
-        stGesture: document.getElementById("stGesture"),
-        stShape: document.getElementById("stShape"),
-        stParticles: document.getElementById("stParticles"),
-        stFps: document.getElementById("stFps"),
-        hint: document.getElementById("contextHint"),
-        toast: document.getElementById("toast"),
-        toastMain: document.getElementById("toastMain"),
-        toastSub: document.getElementById("toastSub"),
-        gate: document.getElementById("gate"),
-        gateMsg: document.getElementById("gateMsg"),
-        btnStart: document.getElementById("btnStart"),
-        btnWebcam: document.getElementById("btnWebcam"),
-        btnHelp: document.getElementById("btnHelp"),
-        btnReset: document.getElementById("btnReset"),
-        help: document.getElementById("helpBackdrop"),
-        btnHelpClose: document.getElementById("btnHelpClose"),
-        debugPanel: document.getElementById("debugPanel"),
-        debugText: document.getElementById("debugText"),
-        debugPreview: document.getElementById("debug-preview"),
-      },
-      webcamBg: localStorage.getItem("hpu_webcam_bg") === "1",
-      helpOpen: false,
-      debug: false,
-      toastTimer: 0,
-      toastUntil: 0,
-      hintText: "",
-      camStatus: "STARTING",
-
-      init() {
-        this.els.chargeFill.style.strokeDasharray = String(CONFIG.chargeCirc);
-        this.els.chargeFill.style.strokeDashoffset = String(CONFIG.chargeCirc);
-        this.setWebcamBg(this.webcamBg, false);
-        this.els.btnWebcam.addEventListener("click", () => this.toggleWebcamBg());
-        this.els.btnHelp.addEventListener("click", () => this.toggleHelp(true));
-        this.els.btnHelpClose.addEventListener("click", () => this.toggleHelp(false));
-        this.els.help.addEventListener("click", (e) => {
-          if (e.target === this.els.help) this.toggleHelp(false);
-        });
-        this.els.btnReset.addEventListener("click", () => App.reset());
-        this.els.btnStart.addEventListener("click", () => Webcam.start());
-      },
-
-      setWebcamBg(on, persist = true) {
-        this.webcamBg = on;
-        this.els.video.classList.toggle("bg-on", on);
-        this.els.overlay.classList.toggle("bg-on", on);
-        this.els.btnWebcam.classList.toggle("on", on);
-        this.els.btnWebcam.textContent = on ? "Webcam On" : "Webcam";
-        if (persist) localStorage.setItem("hpu_webcam_bg", on ? "1" : "0");
-        this.flash(on ? "VIDEO BACKGROUND ON" : "VIDEO BACKGROUND OFF", "");
-      },
-
-      toggleWebcamBg() {
-        this.setWebcamBg(!this.webcamBg);
-      },
-
-      toggleHelp(open) {
-        this.helpOpen = open ?? !this.helpOpen;
-        this.els.help.classList.toggle("open", this.helpOpen);
-      },
-
-      setDebug(on) {
-        this.debug = on;
-        this.els.debugPanel.classList.toggle("on", on);
-        this.els.landmark.classList.toggle("on", on);
-        this.els.debugPreview.classList.toggle("on", on);
-      },
-
-      flash(main, sub = "", ms = 1400) {
-        this.els.toastMain.textContent = main;
-        this.els.toastSub.textContent = sub;
-        this.els.toast.classList.add("show");
-        this.toastUntil = now() + ms;
-      },
-
-      setHint(text, active = false) {
-        if (text === this.hintText) {
-          this.els.hint.classList.toggle("active", active);
-          return;
-        }
-        this.hintText = text;
-        this.els.hint.textContent = text;
-        this.els.hint.classList.toggle("active", active);
-      },
-
-      setCharge(progress, sx, sy) {
-        if (progress <= 0.01) {
-          this.els.chargeRing.classList.remove("visible");
-          return;
-        }
-        this.els.chargeRing.classList.add("visible");
-        this.els.chargeRing.style.left = sx + "px";
-        this.els.chargeRing.style.top = sy + "px";
-        this.els.chargeFill.style.strokeDashoffset =
-          String(CONFIG.chargeCirc * (1 - clamp(progress, 0, 1)));
-      },
-
-      hideGate() {
-        this.els.gate.classList.add("hidden");
-      },
-
-      showGate(msg, isErr = false) {
-        this.els.gate.classList.remove("hidden");
-        this.els.gateMsg.textContent = msg;
-        this.els.gateMsg.classList.toggle("err", isErr);
-        this.els.btnStart.textContent = isErr ? "Try Again" : "Enable Camera";
-      },
-
-      updateStatus(s) {
-        this.els.stHand.textContent = s.hand;
-        this.els.stGesture.textContent = s.gesture;
-        this.els.stShape.textContent = s.shape;
-        this.els.stParticles.textContent = String(s.particles);
-        this.els.stFps.textContent = String(s.fps);
-        if (now() > this.toastUntil) this.els.toast.classList.remove("show");
-      },
-    };
-
-    // ============================================================
-    // 4. Three.js scene
-    // ============================================================
-    const Scene3D = {
-      renderer: null,
-      scene: null,
-      camera: null,
-      group: null,
-      dust: null,
-      clock: new THREE.Clock(),
-      parallax: { x: 0, y: 0 },
-      shake: 0,
-
-      init() {
-        const canvas = UI.els.canvas;
-        if (!window.WebGLRenderingContext) {
-          UI.showGate("WebGL is not available in this browser.", true);
-          return false;
-        }
-
-        try {
-          this.renderer = new THREE.WebGLRenderer({
-            canvas,
-            antialias: true,
-            alpha: true,
-            powerPreference: "high-performance",
-          });
-        } catch (e) {
-          UI.showGate("Could not create WebGL context.", true);
-          return false;
-        }
-
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CONFIG.dprCap));
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setClearColor(0x000000, 0);
-
-        this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 100);
-        this.camera.position.z = 6.4;
-
-        this.group = new THREE.Group();
-        this.scene.add(this.group);
-
-        // Subtle background dust
-        const dustCount = 180;
-        const dustPos = new Float32Array(dustCount * 3);
-        for (let i = 0; i < dustCount; i++) {
-          dustPos[i * 3] = (Math.random() - 0.5) * 18;
-          dustPos[i * 3 + 1] = (Math.random() - 0.5) * 12;
-          dustPos[i * 3 + 2] = (Math.random() - 0.5) * 10 - 4;
-        }
-        const dustGeo = new THREE.BufferGeometry();
-        dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
-        this.dust = new THREE.Points(
-          dustGeo,
-          new THREE.PointsMaterial({
-            color: 0x8aa0aa,
-            size: 0.025,
-            transparent: true,
-            opacity: 0.35,
-            depthWrite: false,
-            blending: THREE.AdditiveBlending,
-          })
-        );
-        this.scene.add(this.dust);
-
-        window.addEventListener("resize", () => this.onResize());
-        return true;
-      },
-
-      onResize() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        this.camera.aspect = w / h;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(w, h);
-      },
-
-      setParallax(x, y) {
-        this.parallax.x = lerp(this.parallax.x, x * 0.25, 0.06);
-        this.parallax.y = lerp(this.parallax.y, y * 0.18, 0.06);
-      },
-
-      addShake(amount = 0.08) {
-        this.shake = Math.max(this.shake, amount);
-      },
-
-      render(groupPos, groupRot, groupScale) {
-        const t = this.clock.getElapsedTime();
-        if (this.dust) this.dust.rotation.y = t * 0.02;
-
-        this.group.position.set(groupPos.x, groupPos.y, groupPos.z);
-        this.group.rotation.set(groupRot.x, groupRot.y, groupRot.z);
-        this.group.scale.setScalar(groupScale);
-
-        const sx = (Math.random() - 0.5) * this.shake;
-        const sy = (Math.random() - 0.5) * this.shake;
-        this.shake *= 0.86;
-
-        this.camera.position.x = this.parallax.x + sx;
-        this.camera.position.y = this.parallax.y + sy;
-        this.camera.lookAt(0, 0, 0);
-
-        this.renderer.render(this.scene, this.camera);
-      },
-    };
-
-    // ============================================================
-    // 5–6. Shape generators
-    // ============================================================
-    function createSpherePoints(n) {
-      const out = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const t = (i + 0.5) / n;
-        const y = 1 - 2 * t;
-        const r = Math.sqrt(Math.max(0, 1 - y * y));
-        const phi = i * 2.399963229728653;
-        const jitter = 0.94 + seededRandom(i + 1) * 0.12;
-        out[i * 3] = Math.cos(phi) * r * 1.55 * jitter;
-        out[i * 3 + 1] = y * 1.55 * jitter;
-        out[i * 3 + 2] = Math.sin(phi) * r * 1.55 * jitter;
+      function createHardCircleTexture() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, "rgba(255,255,255,1)");
+        gradient.addColorStop(0.5, "rgba(255,255,255,0.9)");
+        gradient.addColorStop(0.8, "rgba(255,255,255,0.1)");
+        gradient.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+        return new THREE.CanvasTexture(canvas);
       }
-      return out;
-    }
 
-    function createHeartPoints(n) {
-      const out = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const u = (i / n) * Math.PI * 2;
-        const v = seededRandom(i * 3.1) * Math.PI;
-        // Parametric heart curve extruded
-        const x = 16 * Math.pow(Math.sin(u), 3);
-        const y =
-          13 * Math.cos(u) -
-          5 * Math.cos(2 * u) -
-          2 * Math.cos(3 * u) -
-          Math.cos(4 * u);
-        const depth = (seededRandom(i * 7.7) - 0.5) * 0.9;
-        const s = 0.095;
-        out[i * 3] = x * s;
-        out[i * 3 + 1] = y * s;
-        out[i * 3 + 2] = depth + Math.sin(v) * 0.15;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(PARTICLE_COUNT * 3);
+      const colors = new Float32Array(PARTICLE_COUNT * 3);
+
+      for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 20;
+        colors[i] = 1;
       }
-      return out;
-    }
 
-    function createTorusPoints(n) {
-      const out = new Float32Array(n * 3);
-      const R = 1.2, r = 0.42;
-      for (let i = 0; i < n; i++) {
-        const u = (i / n) * Math.PI * 2 * 7;
-        const v = seededRandom(i + 40) * Math.PI * 2;
-        out[i * 3] = (R + r * Math.cos(v)) * Math.cos(u);
-        out[i * 3 + 1] = (R + r * Math.cos(v)) * Math.sin(u);
-        out[i * 3 + 2] = r * Math.sin(v);
-      }
-      return out;
-    }
+      geometry.setAttribute(
+        "position",
+        new THREE.BufferAttribute(positions, 3)
+      );
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-    function createCubePoints(n) {
-      const out = new Float32Array(n * 3);
-      const half = 1.15;
-      for (let i = 0; i < n; i++) {
-        const face = i % 6;
-        const a = (seededRandom(i) * 2 - 1) * half;
-        const b = (seededRandom(i + 99) * 2 - 1) * half;
-        let x = 0, y = 0, z = 0;
-        if (face === 0) { x = half; y = a; z = b; }
-        else if (face === 1) { x = -half; y = a; z = b; }
-        else if (face === 2) { y = half; x = a; z = b; }
-        else if (face === 3) { y = -half; x = a; z = b; }
-        else if (face === 4) { z = half; x = a; y = b; }
-        else { z = -half; x = a; y = b; }
-        out[i * 3] = x;
-        out[i * 3 + 1] = y;
-        out[i * 3 + 2] = z;
-      }
-      return out;
-    }
+      const material = new THREE.PointsMaterial({
+        size: isMobile ? 0.15 : 0.12,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        map: createHardCircleTexture(),
+      });
 
-    function createGalaxyPoints(n) {
-      const out = new Float32Array(n * 3);
-      const arms = 3;
-      for (let i = 0; i < n; i++) {
-        const arm = i % arms;
-        const t = i / n;
-        const radius = Math.pow(t, 0.65) * 2.0;
-        const angle = arm * ((Math.PI * 2) / arms) + radius * 2.6 + seededRandom(i) * 0.35;
-        const spread = (seededRandom(i + 5) - 0.5) * (0.15 + radius * 0.12);
-        out[i * 3] = Math.cos(angle) * radius + spread;
-        out[i * 3 + 1] = (seededRandom(i + 11) - 0.5) * (0.08 + (1 - t) * 0.25);
-        out[i * 3 + 2] = Math.sin(angle) * radius + spread * 0.6;
-      }
-      return out;
-    }
+      const particles = new THREE.Points(geometry, material);
+      scene.add(particles);
 
-    function createWavePoints(n) {
-      const out = new Float32Array(n * 3);
-      const cols = Math.ceil(Math.sqrt(n));
-      const rows = Math.ceil(n / cols);
-      for (let i = 0; i < n; i++) {
-        const cx = i % cols;
-        const cy = Math.floor(i / cols);
-        const x = (cx / (cols - 1) - 0.5) * 3.2;
-        const z = (cy / Math.max(1, rows - 1) - 0.5) * 3.2;
-        const y = Math.sin(x * 2.2) * Math.cos(z * 2.0) * 0.55;
-        out[i * 3] = x;
-        out[i * 3 + 1] = y;
-        out[i * 3 + 2] = z;
-      }
-      return out;
-    }
-
-    function createDNAPoints(n) {
-      const out = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const y = (t - 0.5) * 3.2;
-        const strand = i % 2;
-        const ang = t * Math.PI * 10 + strand * Math.PI;
-        const r = 0.55;
-        if (i % 14 < 2) {
-          // rungs
-          const u = (i % 14) / 1;
-          out[i * 3] = lerp(-r, r, seededRandom(i)) * Math.cos(ang * 0.1);
-          out[i * 3 + 1] = y;
-          out[i * 3 + 2] = lerp(-r, r, seededRandom(i + 3)) * Math.sin(ang * 0.1);
-        } else {
-          out[i * 3] = Math.cos(ang) * r;
-          out[i * 3 + 1] = y;
-          out[i * 3 + 2] = Math.sin(ang) * r;
-        }
-      }
-      return out;
-    }
-
-    function createStarPoints(n) {
-      const out = new Float32Array(n * 3);
-      const spikes = 5;
-      for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const ang = t * Math.PI * 2 * spikes;
-        const spike = Math.abs(Math.cos(ang * 0.5 * spikes / spikes));
-        // Star polygon radius modulation
-        const a = (i / n) * Math.PI * 2;
-        const rOuter = 1.7;
-        const rInner = 0.65;
-        const k = Math.floor((a / (Math.PI * 2)) * spikes * 2);
-        const r = k % 2 === 0 ? rOuter : rInner;
-        const rr = r * (0.85 + seededRandom(i) * 0.3);
-        const depth = (seededRandom(i + 2) - 0.5) * 0.55;
-        out[i * 3] = Math.cos(a) * rr;
-        out[i * 3 + 1] = Math.sin(a) * rr;
-        out[i * 3 + 2] = depth;
-      }
-      return out;
-    }
-
-    function createInfinityPoints(n) {
-      const out = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        const t = (i / n) * Math.PI * 2;
-        const s = 1.35;
-        const x = (s * Math.cos(t)) / (1 + Math.sin(t) * Math.sin(t));
-        const y = (s * Math.sin(t) * Math.cos(t)) / (1 + Math.sin(t) * Math.sin(t));
-        const z = (seededRandom(i) - 0.5) * 0.7 + Math.sin(t * 2) * 0.15;
-        out[i * 3] = x;
-        out[i * 3 + 1] = y;
-        out[i * 3 + 2] = z;
-      }
-      return out;
-    }
-
-    function createFlowerPoints(n) {
-      const out = new Float32Array(n * 3);
-      const petals = 6;
-      for (let i = 0; i < n; i++) {
-        const t = i / n;
-        const a = t * Math.PI * 2;
-        const r = 0.35 + 1.15 * Math.abs(Math.cos(a * petals / 2));
-        const jitter = seededRandom(i) * 0.12;
-        out[i * 3] = Math.cos(a) * (r + jitter);
-        out[i * 3 + 1] = Math.sin(a) * (r + jitter);
-        out[i * 3 + 2] = (seededRandom(i + 8) - 0.5) * 0.45 + Math.cos(a * petals) * 0.08;
-      }
-      return out;
-    }
-
-    const SHAPES = {
-      sphere: createSpherePoints,
-      heart: createHeartPoints,
-      torus: createTorusPoints,
-      cube: createCubePoints,
-      galaxy: createGalaxyPoints,
-      wave: createWavePoints,
-      dna: createDNAPoints,
-      star: createStarPoints,
-      infinity: createInfinityPoints,
-      flower: createFlowerPoints,
-    };
-
-    // ============================================================
-    // 7. Particle system + transition engine
-    // ============================================================
-    const ParticleSystem = {
-      count: CONFIG.particleCount,
-      positions: null,
-      targets: null,
-      velocities: null,
-      explosionVel: null,
-      seeds: null,
-      colors: null,
-      colorTargets: null,
-      geometry: null,
-      material: null,
-      points: null,
-      shapeIndex: 0,
-      energy: 1,
-      frozen: false,
-      mode: "idle", // idle | explode | reform
-      modeT: 0,
-      glowBoost: 0,
-      paletteIndex: 1,
-
-      init(count) {
-        this.count = count;
-        const n = count;
-        this.positions = new Float32Array(n * 3);
-        this.targets = new Float32Array(n * 3);
-        this.velocities = new Float32Array(n * 3);
-        this.explosionVel = new Float32Array(n * 3);
-        this.seeds = new Float32Array(n);
-        this.colors = new Float32Array(n * 3);
-        this.colorTargets = new Float32Array(n * 3);
-
-        for (let i = 0; i < n; i++) this.seeds[i] = Math.random() * 1000;
-
-        const sphere = SHAPES.sphere(n);
-        this.targets.set(sphere);
-        this.positions.set(sphere);
-        this.applyPalette(this.paletteIndex, true);
-
-        this.geometry = new THREE.BufferGeometry();
-        this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
-        this.geometry.setAttribute("color", new THREE.BufferAttribute(this.colors, 3));
-
-        this.material = new THREE.PointsMaterial({
-          size: 0.045,
-          vertexColors: true,
-          transparent: true,
-          opacity: 0.92,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-          sizeAttenuation: true,
-        });
-
-        this.points = new THREE.Points(this.geometry, this.material);
-        Scene3D.group.add(this.points);
-      },
-
-      applyPalette(index, instant = false) {
-        this.paletteIndex = clamp(index, 0, COLOR_PALETTES.length - 1);
-        const p = COLOR_PALETTES[this.paletteIndex];
-        for (let i = 0; i < this.count; i++) {
-          const m = seededRandom(this.seeds[i] + 17);
-          const i3 = i * 3;
-          this.colorTargets[i3] = lerp(p.a[0], p.b[0], m);
-          this.colorTargets[i3 + 1] = lerp(p.a[1], p.b[1], m);
-          this.colorTargets[i3 + 2] = lerp(p.a[2], p.b[2], m);
-          if (instant) {
-            this.colors[i3] = this.colorTargets[i3];
-            this.colors[i3 + 1] = this.colorTargets[i3 + 1];
-            this.colors[i3 + 2] = this.colorTargets[i3 + 2];
-          }
-        }
-        if (instant && this.geometry) this.geometry.attributes.color.needsUpdate = true;
-      },
-
-      setShape(nameOrIndex, explodeLite = true) {
-        let idx =
-          typeof nameOrIndex === "number"
-            ? nameOrIndex
-            : SHAPE_NAMES.indexOf(nameOrIndex);
-        if (idx < 0) idx = 0;
-        idx = ((idx % SHAPE_NAMES.length) + SHAPE_NAMES.length) % SHAPE_NAMES.length;
-        this.shapeIndex = idx;
-        const name = SHAPE_NAMES[idx];
-        const pts = SHAPES[name](this.count);
-        this.targets.set(pts);
-
-        if (explodeLite) {
-          for (let i = 0; i < this.count; i++) {
-            const i3 = i * 3;
-            const s = 0.04 + seededRandom(this.seeds[i]) * 0.08;
-            this.velocities[i3] += (seededRandom(this.seeds[i] + 1) - 0.5) * s;
-            this.velocities[i3 + 1] += (seededRandom(this.seeds[i] + 2) - 0.5) * s;
-            this.velocities[i3 + 2] += (seededRandom(this.seeds[i] + 3) - 0.5) * s;
-          }
-          this.glowBoost = 1;
-        }
-
-        UI.els.stShape.textContent = name.toUpperCase();
-        UI.flash(name.toUpperCase(), "SHAPE", 1600);
-        return name;
-      },
-
-      nextShape() {
-        return this.setShape(this.shapeIndex + 1, true);
-      },
-
-      prevShape() {
-        return this.setShape(this.shapeIndex - 1, true);
-      },
-
-      explode() {
-        this.mode = "explode";
-        this.modeT = 0;
-        this.glowBoost = 1.5;
-        for (let i = 0; i < this.count; i++) {
-          const i3 = i * 3;
-          const px = this.positions[i3];
-          const py = this.positions[i3 + 1];
-          const pz = this.positions[i3 + 2];
-          let len = Math.sqrt(px * px + py * py + pz * pz) || 1;
-          const s = CONFIG.explosionStrength * (0.7 + seededRandom(this.seeds[i]) * 1.4);
-          this.explosionVel[i3] = (px / len) * s * 18 + (seededRandom(this.seeds[i] + 4) - 0.5) * 2.5;
-          this.explosionVel[i3 + 1] = (py / len) * s * 18 + (seededRandom(this.seeds[i] + 5) - 0.5) * 2.5;
-          this.explosionVel[i3 + 2] = (pz / len) * s * 18 + (seededRandom(this.seeds[i] + 6) - 0.5) * 2.5;
-          this.velocities[i3] = this.explosionVel[i3];
-          this.velocities[i3 + 1] = this.explosionVel[i3 + 1];
-          this.velocities[i3 + 2] = this.explosionVel[i3 + 2];
-        }
-        Scene3D.addShake(0.1);
-      },
-
-      beginReformToNext() {
-        this.nextShape();
-        this.mode = "reform";
-        this.modeT = 0;
-        this.glowBoost = 1.2;
-      },
-
-      update(dt) {
-        const n = this.count;
-        const energy = this.frozen ? 0.05 : this.energy;
-        this.modeT += dt * 1000;
-        this.glowBoost = Math.max(0, this.glowBoost - dt * 0.7);
-
-        let attraction = CONFIG.attraction;
-        let damping = CONFIG.damping;
-        let noise = CONFIG.noiseStrength * energy;
-
-        if (this.mode === "explode") {
-          attraction = 0.001;
-          damping = 0.965;
-          noise = 0.01;
-          if (this.modeT > CONFIG.explosionDuration) {
-            this.beginReformToNext();
-          }
-        } else if (this.mode === "reform") {
-          attraction = CONFIG.reformAttraction;
-          damping = 0.88;
-          noise = CONFIG.noiseStrength * 0.4;
-          if (this.modeT > CONFIG.transformDuration) {
-            this.mode = "idle";
-          }
-        }
-
-        if (App.charge > 0.01 && (GestureEngine.state === GESTURE.CHARGING || GestureEngine.state === GESTURE.CHARGED)) {
-          // Compress toward center while charging
-          attraction += 0.01 * App.charge;
-          noise += 0.006 * App.charge;
-        }
-
-        const t = Scene3D.clock.getElapsedTime();
-
-        for (let i = 0; i < n; i++) {
-          const i3 = i * 3;
-          const seed = this.seeds[i];
-
-          const tx = this.targets[i3];
-          const ty = this.targets[i3 + 1];
-          const tz = this.targets[i3 + 2];
-
-          let ax = (tx - this.positions[i3]) * attraction;
-          let ay = (ty - this.positions[i3 + 1]) * attraction;
-          let az = (tz - this.positions[i3 + 2]) * attraction;
-
-          // Living noise
-          ax += Math.sin(t * 1.3 + seed) * noise;
-          ay += Math.cos(t * 1.1 + seed * 1.3) * noise;
-          az += Math.sin(t * 0.9 + seed * 0.7) * noise;
-
-          this.velocities[i3] = (this.velocities[i3] + ax) * damping;
-          this.velocities[i3 + 1] = (this.velocities[i3 + 1] + ay) * damping;
-          this.velocities[i3 + 2] = (this.velocities[i3 + 2] + az) * damping;
-
-          if (this.frozen) {
-            this.velocities[i3] *= 0.85;
-            this.velocities[i3 + 1] *= 0.85;
-            this.velocities[i3 + 2] *= 0.85;
-          }
-
-          this.positions[i3] += this.velocities[i3];
-          this.positions[i3 + 1] += this.velocities[i3 + 1];
-          this.positions[i3 + 2] += this.velocities[i3 + 2];
-
-          // Color lerp
-          this.colors[i3] = lerp(this.colors[i3], this.colorTargets[i3], 1 - Math.exp(-3 * dt));
-          this.colors[i3 + 1] = lerp(this.colors[i3 + 1], this.colorTargets[i3 + 1], 1 - Math.exp(-3 * dt));
-          this.colors[i3 + 2] = lerp(this.colors[i3 + 2], this.colorTargets[i3 + 2], 1 - Math.exp(-3 * dt));
-        }
-
-        this.geometry.attributes.position.needsUpdate = true;
-        this.geometry.attributes.color.needsUpdate = true;
-
-        const baseSize = 0.042 + this.glowBoost * 0.025 + (App.charge * 0.02);
-        this.material.size = baseSize * (0.95 + energy * 0.08);
-        this.material.opacity = 0.85 + this.glowBoost * 0.12;
-      },
-
-      reduceCount(newCount) {
-        // Soft adaptive: keep arrays but only update/render subset via drawRange
-        this.count = newCount;
-        this.geometry.setDrawRange(0, newCount);
-        UI.els.stParticles.textContent = String(newCount);
-      },
-    };
-
-    // ============================================================
-    // 8. Webcam
-    // ============================================================
-    const Webcam = {
-      stream: null,
-      cameraUtils: null,
-      status: "STARTING",
-      ready: false,
-
-      async start() {
-        UI.camStatus = "STARTING";
-        UI.setHint("STARTING CAMERA…");
-        UI.els.btnStart.disabled = true;
-        UI.els.btnStart.textContent = "Starting…";
-
-        try {
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw Object.assign(new Error("getUserMedia unsupported"), { name: "NotSupportedError" });
-          }
-
-          // Stop previous stream if any
-          if (this.stream) {
-            this.stream.getTracks().forEach((tr) => tr.stop());
-            this.stream = null;
-          }
-
-          this.stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              facingMode: "user",
-              width: { ideal: CONFIG.camWidth },
-              height: { ideal: CONFIG.camHeight },
-            },
-          });
-
-          const video = UI.els.video;
-          video.srcObject = this.stream;
-          video.setAttribute("playsinline", "");
-          video.muted = true;
-          await video.play().catch(() => {});
-
-          UI.els.debugPreview.srcObject = this.stream;
-          await UI.els.debugPreview.play().catch(() => {});
-
-          await HandsVision.init(video);
-          this.ready = true;
-          this.status = "READY";
-          UI.camStatus = "READY";
-          UI.hideGate();
-          UI.setHint("SHOW YOUR HAND");
-          UI.flash("CAMERA READY", "SHOW YOUR HAND", 1600);
-        } catch (err) {
-          console.error("Webcam error:", err);
-          this.ready = false;
-          if (err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
-            this.status = "DENIED";
-            UI.camStatus = "DENIED";
-            UI.showGate("Camera permission denied. Allow camera access, then try again.", true);
-            UI.setHint("CAMERA DENIED");
+      // --- Shapes Math ---
+      const shapes = {
+        sphere: (i) => {
+          const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
+          const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
+          return [
+            4 * Math.cos(theta) * Math.sin(phi),
+            4 * Math.sin(theta) * Math.sin(phi),
+            4 * Math.cos(phi),
+          ];
+        },
+        heart: (i) => {
+          const phi = Math.random() * Math.PI * 2;
+          const x = 16 * Math.pow(Math.sin(phi), 3);
+          const y =
+            13 * Math.cos(phi) -
+            5 * Math.cos(2 * phi) -
+            2 * Math.cos(3 * phi) -
+            Math.cos(4 * phi);
+          return [x * 0.25, y * 0.25, (Math.random() - 0.5) * 2];
+        },
+        saturn: (i) => {
+          if (i < PARTICLE_COUNT * 0.6) {
+            const phi = Math.acos(-1 + (2 * i) / (PARTICLE_COUNT * 0.6));
+            const theta = Math.sqrt(PARTICLE_COUNT * 0.6 * Math.PI) * phi;
+            return [
+              2.5 * Math.cos(theta) * Math.sin(phi),
+              2.5 * Math.sin(theta) * Math.sin(phi),
+              2.5 * Math.cos(phi),
+            ];
           } else {
-            this.status = "ERROR";
-            UI.camStatus = "ERROR";
-            UI.showGate("Could not open the camera. Check devices and try again.", true);
-            UI.setHint("CAMERA ERROR");
+            const angle = Math.random() * Math.PI * 2;
+            const r = 4.5 + Math.random() * 2;
+            return [
+              r * Math.cos(angle),
+              (Math.random() - 0.5) * 0.3,
+              r * Math.sin(angle),
+            ];
           }
-        } finally {
-          UI.els.btnStart.disabled = false;
-          UI.els.btnStart.textContent = "Try Again";
+        },
+        flower: (i) => {
+          const u = Math.random() * Math.PI * 2;
+          const v = Math.random() * Math.PI;
+          const r = 3 + Math.sin(5 * u) * Math.sin(5 * v);
+          return [
+            r * Math.sin(v) * Math.cos(u),
+            r * Math.sin(v) * Math.sin(u),
+            r * Math.cos(v),
+          ];
+        },
+        fireworks: (i) => {
+          const r = Math.pow(Math.random(), 1 / 3) * 7;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          return [
+            r * Math.sin(phi) * Math.cos(theta),
+            r * Math.sin(phi) * Math.sin(theta),
+            r * Math.cos(phi),
+          ];
+        },
+      };
+
+      function getTargetPositions(shapeName) {
+        const arr = new Float32Array(PARTICLE_COUNT * 3);
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const [x, y, z] = shapes[shapeName](i);
+          arr[i * 3] = x;
+          arr[i * 3 + 1] = y;
+          arr[i * 3 + 2] = z;
         }
-      },
-    };
+        return arr;
+      }
 
-    // ============================================================
-    // 8b. MediaPipe Hands
-    // ============================================================
-    const HandsVision = {
-      hands: null,
-      busy: false,
-      lastInfer: 0,
-      latency: 0,
-      lastResults: null,
-      landmarkCtx: null,
+      targetPositions = getTargetPositions(currentShape);
 
-      async init(videoEl) {
-        if (typeof Hands === "undefined") {
-          throw new Error("MediaPipe Hands failed to load from CDN");
-        }
+      function cycleShape() {
+        const now = Date.now();
+        if (now - lastPinchTime < 4000) return;
 
-        this.landmarkCtx = UI.els.landmark.getContext("2d");
-        this.resizeLandmark();
-        window.addEventListener("resize", () => this.resizeLandmark());
+        shapeIndex = (shapeIndex + 1) % shapeList.length;
+        currentShape = shapeList[shapeIndex];
 
-        this.hands = new Hands({
-          locateFile: (file) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
-        });
+        document.getElementById("current-shape-name").innerText = currentShape;
 
-        this.hands.setOptions({
-          maxNumHands: 2,
-          modelComplexity: 1,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.6,
-        });
+        targetPositions = getTargetPositions(currentShape);
+        lastPinchTime = now;
+      }
 
-        this.hands.onResults((results) => this.onResults(results));
+      // --- Hand Tracking ---
+      const videoElement = document.getElementById("webcam-feed");
+      const hands = new Hands({
+        locateFile: (file) =>
+          `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+      });
 
-        // Drive inference from the existing getUserMedia stream (no second permission prompt)
-        if (!this._pumping) {
-          this._pumping = true;
-          this.pump(videoEl);
-        }
-      },
+      hands.setOptions({
+        maxNumHands: 1,
+        modelComplexity: isMobile ? 0 : 1, // Lower complexity on mobile
+        minDetectionConfidence: 0.6,
+        minTrackingConfidence: 0.6,
+      });
 
-      pump(videoEl) {
-        const loop = async () => {
-          await this.processFrame(videoEl);
-          requestAnimationFrame(loop);
-        };
-        requestAnimationFrame(loop);
-      },
-
-      async processFrame(videoEl) {
-        if (!this.hands || this.busy) return;
-        if (videoEl.readyState < 2) return;
-        const t = now();
-        const minInterval = 1000 / CONFIG.mediapipeFps;
-        if (t - this.lastInfer < minInterval) return;
-        this.busy = true;
-        this.lastInfer = t;
-        const t0 = now();
-        try {
-          await this.hands.send({ image: videoEl });
-          this.latency = now() - t0;
-        } catch (e) {
-          console.error("MediaPipe frame error:", e);
-        } finally {
-          this.busy = false;
-        }
-      },
-
-      onResults(results) {
-        this.lastResults = results;
-        GestureEngine.update(results);
-        if (UI.debug) this.drawLandmarks(results);
-      },
-
-      resizeLandmark() {
-        const c = UI.els.landmark;
-        c.width = window.innerWidth;
-        c.height = window.innerHeight;
-      },
-
-      drawLandmarks(results) {
-        const ctx = this.landmarkCtx;
-        const c = UI.els.landmark;
-        if (!ctx) return;
-        ctx.clearRect(0, 0, c.width, c.height);
-        const hands = results.multiHandLandmarks || [];
-        ctx.lineWidth = 2;
-        hands.forEach((lm) => {
-          ctx.strokeStyle = "rgba(143,214,208,0.7)";
-          ctx.fillStyle = "rgba(244,241,234,0.9)";
-          for (let i = 0; i < lm.length; i++) {
-            const x = lm[i].x * c.width;
-            const y = lm[i].y * c.height;
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
-      },
-    };
-
-    // ============================================================
-    // 9–10. Gesture detection + state machine
-    // ============================================================
-    const GestureEngine = {
-      state: GESTURE.IDLE,
-      hands: 0,
-      fingerCount: 0,
-      stableFingers: -1,
-      fingerSince: 0,
-      pinchRatio: 1,
-      pinching: false,
-      charged: false,
-      chargeStart: 0,
-      palmOpenSince: 0,
-      fistSince: 0,
-      swipeHist: [],
-      lastSwipeAt: 0,
-      cooldownUntil: 0,
-      twoHandBaseDist: 0,
-      twoHandReady: false,
-      lastLabel: "IDLE",
-      debug: {
-        center: { x: 0.5, y: 0.5 },
-        twoDist: 0,
-        swipeVx: 0,
-        rot: { x: 0, y: 0, z: 0 },
-      },
-
-      reset() {
-        this.state = GESTURE.IDLE;
-        this.pinching = false;
-        this.charged = false;
-        this.swipeHist = [];
-        this.twoHandReady = false;
-        this.stableFingers = -1;
-        App.charge = 0;
-        UI.setCharge(0, 0, 0);
-      },
-
-      palmSize(lm) {
-        return dist2(lm[0].x, lm[0].y, lm[9].x, lm[9].y) + 1e-5;
-      },
-
-      handCenter(lm) {
-        const idxs = [0, 5, 9, 13, 17];
-        let x = 0, y = 0, z = 0;
-        for (const i of idxs) {
-          x += lm[i].x;
-          y += lm[i].y;
-          z += lm[i].z || 0;
-        }
-        const n = idxs.length;
-        return { x: x / n, y: y / n, z: z / n };
-      },
-
-      detectFingerCount(lm, handedness) {
-        let count = 0;
-        const tips = [8, 12, 16, 20];
-        const pips = [6, 10, 14, 18];
-        for (let i = 0; i < 4; i++) {
-          if (lm[tips[i]].y < lm[pips[i]].y - 0.02) count++;
-        }
-        // Thumb: compare tip to IP on x, respecting handedness (camera mirrored)
-        const isRight = handedness === "Right";
-        if (isRight) {
-          if (lm[4].x < lm[3].x - 0.02) count++;
-        } else {
-          if (lm[4].x > lm[3].x + 0.02) count++;
-        }
-        return clamp(count, 0, 5);
-      },
-
-      detectPinch(lm) {
-        const d = dist3(
-          lm[4].x, lm[4].y, lm[4].z || 0,
-          lm[8].x, lm[8].y, lm[8].z || 0
-        );
-        const ratio = d / this.palmSize(lm);
-        return ratio;
-      },
-
-      detectOpenPalm(lm, fingers) {
-        return fingers >= 4;
-      },
-
-      detectFist(lm, fingers) {
-        return fingers <= 0;
-      },
-
-      detectHandRotation(lm) {
-        const wrist = lm[0];
-        const mid = lm[9];
-        const idx = lm[5];
-        const pinky = lm[17];
-        const yaw = Math.atan2(mid.x - wrist.x, mid.y - wrist.y);
-        const pitch = ((idx.z || 0) - (wrist.z || 0)) * 5;
-        const roll = (pinky.x - idx.x) * 4;
-        return { x: pitch, y: -yaw, z: roll };
-      },
-
-      detectTwoHandDistance(c0, c1) {
-        return dist2(c0.x, c0.y, c1.x, c1.y);
-      },
-
-      detectSwipe(center, t) {
-        this.swipeHist.push({ x: center.x, y: center.y, t });
-        while (this.swipeHist.length && t - this.swipeHist[0].t > CONFIG.swipeMaxMs) {
-          this.swipeHist.shift();
-        }
-        if (this.swipeHist.length < 3) return null;
-        if (t < this.lastSwipeAt + CONFIG.swipeCooldown) return null;
-
-        const a = this.swipeHist[0];
-        const b = this.swipeHist[this.swipeHist.length - 1];
-        const dt = b.t - a.t;
-        if (dt < CONFIG.swipeMinMs || dt > CONFIG.swipeMaxMs) return null;
-
-        const dx = b.x - a.x; // mirrored video: +dx = hand moves left on screen visually? 
-        // Landmarks are in image space (not mirrored). Video is mirrored for display.
-        // User moves hand to their right → landmark x decreases in mirrored selfie? 
-        // MediaPipe image coords: x increases right in the camera image (unmirrored).
-        // Selfie front camera: user's right hand motion toward user's right increases x in image.
-        // We mirror display only. Swipe right (user's right) => +dx in landmark space.
-        const dy = b.y - a.y;
-        this.debug.swipeVx = dx / (dt / 1000);
-
-        if (Math.abs(dx) > CONFIG.swipeMinDist && Math.abs(dy) < CONFIG.swipeMaxVert) {
-          this.swipeHist = [];
-          this.lastSwipeAt = t;
-          // User swipe to their right (positive dx) → next shape
-          return dx > 0 ? "right" : "left";
-        }
-        if (Math.abs(dy) > CONFIG.swipeMinDist && Math.abs(dx) < CONFIG.swipeMaxVert) {
-          this.swipeHist = [];
-          this.lastSwipeAt = t;
-          return dy < 0 ? "up" : "down";
-        }
-        return null;
-      },
-
-      enterCooldown(ms = CONFIG.gestureCooldown) {
-        this.cooldownUntil = now() + ms;
-        this.state = GESTURE.COOLDOWN;
-      },
-
-      update(results) {
-        const t = now();
-        const multi = results.multiHandLandmarks || [];
-        const handed = results.multiHandedness || [];
-        this.hands = multi.length;
-
-        // Hard locks during explosion / transform
+      hands.onResults((results) => {
+        document.getElementById("loading").style.display = "none";
         if (
-          ParticleSystem.mode === "explode" ||
-          ParticleSystem.mode === "reform" ||
-          this.state === GESTURE.EXPLODING ||
-          this.state === GESTURE.TRANSFORMING
+          results.multiHandLandmarks &&
+          results.multiHandLandmarks.length > 0
         ) {
-          if (ParticleSystem.mode === "explode") this.state = GESTURE.EXPLODING;
-          else if (ParticleSystem.mode === "reform") this.state = GESTURE.TRANSFORMING;
-          else if (ParticleSystem.mode === "idle" && (this.state === GESTURE.EXPLODING || this.state === GESTURE.TRANSFORMING)) {
-            this.enterCooldown(400);
-          }
-          this.lastLabel = this.state;
-          UI.setHint(this.state === GESTURE.EXPLODING ? "EXPLODING" : "TRANSFORMING", true);
-          return;
-        }
+          const lm = results.multiHandLandmarks[0];
 
-        if (t < this.cooldownUntil && this.state === GESTURE.COOLDOWN) {
-          this.lastLabel = GESTURE.COOLDOWN;
-          return;
-        }
+          handX = (1 - lm[8].x) * 2 - 1;
+          handY = (1 - lm[8].y) * 2 - 1;
 
-        if (multi.length === 0) {
-          if (this.pinching) {
-            this.pinching = false;
-            this.charged = false;
-            App.charge = 0;
-            UI.setCharge(0, 0, 0);
-          }
-          this.state = GESTURE.IDLE;
-          this.twoHandReady = false;
-          this.swipeHist = [];
-          this.lastLabel = "IDLE";
-          UI.setHint(Webcam.ready ? "SHOW YOUR HAND" : "ALLOW CAMERA TO BEGIN");
-          App.targetPos.set(0, 0, 0);
-          return;
-        }
+          const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+          isPinching = pinchDist < 0.05;
+          if (isPinching) cycleShape();
 
-        UI.setHint("HAND CONTROL ACTIVE");
+          const isIndexDown = lm[8].y > lm[6].y;
+          const isMiddleDown = lm[12].y > lm[10].y;
+          const isRingDown = lm[16].y > lm[14].y;
+          const isPinkyDown = lm[20].y > lm[18].y;
 
-        // —— Two hands: priority after pinch/explode ——
-        if (multi.length >= 2) {
-          this.handleTwoHands(multi, t);
-          return;
-        }
+          isFist = isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+          isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
 
-        // —— One hand ——
-        const lm = multi[0];
-        const label = handed[0]?.label || "Right";
-        const center = this.handCenter(lm);
-        this.debug.center = center;
-
-        // Mirror landmark x for screen mapping (video is mirrored)
-        const screenX = (1 - center.x) * window.innerWidth;
-        const screenY = center.y * window.innerHeight;
-
-        const fingers = this.detectFingerCount(lm, label);
-        this.fingerCount = fingers;
-
-        const ratio = this.detectPinch(lm);
-        this.pinchRatio = ratio;
-
-        // Pinch hysteresis
-        if (!this.pinching && ratio < CONFIG.pinchEnter) {
-          this.pinching = true;
-          this.charged = false;
-          this.chargeStart = t;
-          App.charge = 0;
-          this.state = GESTURE.CHARGING;
-        } else if (this.pinching && ratio > CONFIG.pinchExit) {
-          // Release
-          if (this.charged || App.charge >= 0.98) {
-            this.triggerExplosion();
+          if (isFrozen) {
+            videoElement.style.borderColor = "var(--freeze)";
+          } else if (isPinching) {
+            videoElement.style.borderColor = "var(--morph)";
+          } else if (isFist) {
+            videoElement.style.borderColor = "var(--accent)";
+            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
           } else {
-            App.charge = 0;
-            UI.setCharge(0, 0, 0);
-            this.state = GESTURE.TRACKING_ONE_HAND;
+            videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
+            videoElement.style.boxShadow = "none";
           }
-          this.pinching = false;
-          this.charged = false;
-          return;
         }
+      });
 
-        if (this.pinching) {
-          const progress = clamp((t - this.chargeStart) / CONFIG.chargeDuration, 0, 1);
-          App.charge = progress;
-          UI.setCharge(progress, screenX, screenY);
-          if (progress >= 1) {
-            this.charged = true;
-            this.state = GESTURE.CHARGED;
-            UI.setHint("CHARGED — RELEASE TO EXPLODE", true);
-          } else {
-            this.state = GESTURE.CHARGING;
-            UI.setHint("PINCH AND HOLD TO CHARGE", true);
-          }
-          this.lastLabel = this.state;
-          // Still allow soft move while charging
-          this.applyOneHandMoveRotate(center, lm, 0.5);
-          return;
-        }
+      const cameraUtils = new Camera(videoElement, {
+        onFrame: async () => {
+          await hands.send({ image: videoElement });
+        },
+        width: isMobile ? 480 : 720,
+        height: isMobile ? 320 : 480,
+      });
+      cameraUtils.start();
 
-        // Swipe (open-ish hand)
-        if (fingers >= 3) {
-          const swipe = this.detectSwipe(center, t);
-          if (swipe) {
-            this.handleSwipe(swipe);
-            return;
-          }
-        } else {
-          this.swipeHist = [];
-        }
+      // --- Animation Loop ---
+      const clock = new THREE.Clock();
+      const colorObj = new THREE.Color();
 
-        // Fist / open palm
-        if (this.detectFist(lm, fingers)) {
-          if (!this.fistSince) this.fistSince = t;
-          if (t - this.fistSince > CONFIG.fistHoldMs) {
-            ParticleSystem.frozen = true;
-            this.state = GESTURE.FROZEN;
-            UI.setHint("FROZEN", true);
-            this.lastLabel = "FIST";
-            return;
-          }
-        } else {
-          this.fistSince = 0;
-        }
+      function animate() {
+        requestAnimationFrame(animate);
+        const time = clock.getElapsedTime();
+        const posAttr = particles.geometry.attributes.position;
+        const colAttr = particles.geometry.attributes.color;
 
-        if (this.detectOpenPalm(lm, fingers)) {
-          if (!this.palmOpenSince) this.palmOpenSince = t;
-          if (t - this.palmOpenSince > CONFIG.openPalmHoldMs) {
-            if (ParticleSystem.frozen) {
-              ParticleSystem.frozen = false;
-              UI.flash("RESUME", "MOTION");
+        if (!isFrozen) {
+          particles.rotation.y += 0.003 + handX * 0.04;
+          particles.rotation.x += handY * 0.02;
+
+          const s = isFist ? 2.2 : 1.0;
+          particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
+
+          for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const ix = i * 3;
+            posAttr.array[ix] +=
+              (targetPositions[ix] - posAttr.array[ix]) * 0.08;
+            posAttr.array[ix + 1] +=
+              (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.08;
+            posAttr.array[ix + 2] +=
+              (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
+
+            if (currentShape !== "fireworks") {
+              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.005;
+              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.005;
             } else {
-              App.targetPos.set(0, 0, 0);
-              UI.flash("RECENTER", "");
+              posAttr.array[ix + 1] -= 0.02;
+              if (posAttr.array[ix + 1] < -6) posAttr.array[ix + 1] = 6;
             }
-            this.palmOpenSince = t + 1000; // prevent spam
-            this.enterCooldown(500);
-            return;
+
+            const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
+            const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
+            colorObj.setHSL(hue, 0.8, 0.6);
+            colAttr.array[ix] = colorObj.r;
+            colAttr.array[ix + 1] = colorObj.g;
+            colAttr.array[ix + 2] = colorObj.b;
           }
-        } else {
-          this.palmOpenSince = 0;
+          posAttr.needsUpdate = true;
+          colAttr.needsUpdate = true;
         }
 
-        if (ParticleSystem.frozen) {
-          this.state = GESTURE.FROZEN;
-        } else {
-          this.state = GESTURE.TRACKING_ONE_HAND;
-        }
+        renderer.render(scene, camera);
+      }
 
-        // Finger colors (stable, not during conflicts)
-        this.handleFingerColor(fingers, t);
+      window.addEventListener("resize", () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
 
-        this.applyOneHandMoveRotate(center, lm, 1);
-        this.lastLabel = this.state;
-      },
+   
+      document.addEventListener(
+        "touchmove",
+        function (e) {
+          if (e.scale !== 1) e.preventDefault();
+        },
+        { passive: false }
+      );
 
-      applyOneHandMoveRotate(center, lm, strength) {
-        // Mirror X for natural control
-        const nx = 1 - center.x;
-        const ny = 1 - center.y;
-        const dx = nx - 0.5;
-        const dy = ny - 0.5;
-        const dead = CONFIG.deadZone;
-        const sx = Math.abs(dx) < dead ? 0 : dx;
-        const sy = Math.abs(dy) < dead ? 0 : dy;
-
-        App.targetPos.x = clamp(sx * 4.2, -CONFIG.positionLimit, CONFIG.positionLimit) * strength;
-        App.targetPos.y = clamp(sy * 2.8, -CONFIG.positionLimit * 0.75, CONFIG.positionLimit * 0.75) * strength;
-
-        const rot = this.detectHandRotation(lm);
-        this.debug.rot = rot;
-        App.targetRot.x = rot.x * 0.55 * strength;
-        App.targetRot.y = rot.y * 0.75 * strength;
-        App.targetRot.z = rot.z * 0.55 * strength;
-
-        Scene3D.setParallax(sx, sy);
-      },
-
-      handleTwoHands(multi, t) {
-        this.state = GESTURE.TRACKING_TWO_HANDS;
-        this.pinching = false;
-        App.charge = 0;
-        UI.setCharge(0, 0, 0);
-
-        const c0 = this.handCenter(multi[0]);
-        const c1 = this.handCenter(multi[1]);
-        const dist = this.detectTwoHandDistance(c0, c1);
-        this.debug.twoDist = dist;
-
-        if (!this.twoHandReady) {
-          this.twoHandBaseDist = dist;
-          this.twoHandReady = true;
-          App.twoHandRefScale = App.scale;
-        }
-
-        const ratio = dist / (this.twoHandBaseDist || dist);
-        const nextScale = clamp(
-          App.twoHandRefScale * ratio,
-          CONFIG.minScale,
-          CONFIG.maxScale
-        );
-        App.targetScale = nextScale;
-
-        // Midpoint position (mirrored)
-        const mx = 1 - (c0.x + c1.x) * 0.5;
-        const my = 1 - (c0.y + c1.y) * 0.5;
-        App.targetPos.x = clamp((mx - 0.5) * 3.2, -CONFIG.positionLimit, CONFIG.positionLimit);
-        App.targetPos.y = clamp((my - 0.5) * 2.2, -CONFIG.positionLimit * 0.7, CONFIG.positionLimit * 0.7);
-
-        // Relative rotation from hand line
-        const ang = Math.atan2(c1.y - c0.y, c1.x - c0.x);
-        App.targetRot.z = ang * 0.85;
-
-        UI.setHint(`SCALE ${nextScale.toFixed(2)}×`, true);
-        this.lastLabel = "TWO_HANDS";
-      },
-
-      handleSwipe(dir) {
-        if (dir === "right") {
-          ParticleSystem.nextShape();
-          UI.flash("NEXT SHAPE", SHAPE_NAMES[ParticleSystem.shapeIndex].toUpperCase());
-        } else if (dir === "left") {
-          ParticleSystem.prevShape();
-          UI.flash("PREV SHAPE", SHAPE_NAMES[ParticleSystem.shapeIndex].toUpperCase());
-        } else if (dir === "up") {
-          ParticleSystem.energy = clamp(ParticleSystem.energy + 0.35, 0.4, 2.4);
-          UI.flash("ENERGY +1", ParticleSystem.energy.toFixed(2));
-        } else if (dir === "down") {
-          ParticleSystem.energy = clamp(ParticleSystem.energy - 0.35, 0.4, 2.4);
-          UI.flash("ENERGY -1", ParticleSystem.energy.toFixed(2));
-        }
-        this.enterCooldown(CONFIG.swipeCooldown);
-      },
-
-      handleFingerColor(fingers, t) {
-        if (fingers !== this.stableFingers) {
-          this.stableFingers = fingers;
-          this.fingerSince = t;
-          return;
-        }
-        if (t - this.fingerSince < CONFIG.fingerHoldMs) return;
-        if (ParticleSystem.paletteIndex === fingers) return;
-        ParticleSystem.applyPalette(fingers, false);
-        const p = COLOR_PALETTES[fingers];
-        UI.flash(`${fingers} FINGERS`, p.name, 1300);
-        this.fingerSince = t + 600;
-      },
-
-      triggerExplosion() {
-        App.charge = 0;
-        UI.setCharge(0, 0, 0);
-        this.state = GESTURE.EXPLODING;
-        ParticleSystem.explode();
-        UI.flash("EXPLOSION", "TRANSFORMING", 1200);
-        UI.setHint("EXPLODING", true);
-      },
-    };
-
-    // ============================================================
-    // 11–13. App controller + fallbacks + loop
-    // ============================================================
-    const App = {
-      pos: new THREE.Vector3(),
-      targetPos: new THREE.Vector3(),
-      rot: new THREE.Euler(),
-      targetRot: new THREE.Euler(),
-      scale: 1,
-      targetScale: 1,
-      twoHandRefScale: 1,
-      charge: 0,
-      fps: 60,
-      fpsAccum: 0,
-      fpsFrames: 0,
-      lowFpsTimer: 0,
-      perfMode: false,
-      mouseDown: false,
-      mouseCharge: 0,
-      lastFrame: now(),
-      renderLatency: 0,
-
-      init() {
-        UI.init();
-        if (!Scene3D.init()) return;
-
-        let count = CONFIG.particleCount;
-        // Mild device heuristic
-        const cores = navigator.hardwareConcurrency || 4;
-        if (cores <= 4 && window.innerWidth < 900) count = 2200;
-        ParticleSystem.init(count);
-        UI.els.stParticles.textContent = String(count);
-
-        this.bindKeyboard();
-        this.bindMouse();
-
-        document.addEventListener("visibilitychange", () => {
-          if (document.hidden) Scene3D.clock.stop();
-          else Scene3D.clock.start();
-        });
-
-        UI.setHint("ALLOW CAMERA TO BEGIN");
-        this.loop();
-      },
-
-      reset() {
-        ParticleSystem.setShape(0, true);
-        ParticleSystem.energy = 1;
-        ParticleSystem.frozen = false;
-        ParticleSystem.mode = "idle";
-        ParticleSystem.applyPalette(1, false);
-        this.targetPos.set(0, 0, 0);
-        this.targetRot.set(0, 0, 0);
-        this.targetScale = 1;
-        this.scale = 1;
-        this.charge = 0;
-        GestureEngine.reset();
-        UI.flash("RESET", "SPHERE");
-        UI.setHint(Webcam.ready ? "SHOW YOUR HAND" : "ALLOW CAMERA TO BEGIN");
-      },
-
-      bindKeyboard() {
-        window.addEventListener("keydown", (e) => {
-          if (e.target && /input|textarea/i.test(e.target.tagName)) return;
-          const k = e.key;
-          if (k === "Escape") UI.toggleHelp(false);
-          if (k === "h" || k === "H") UI.toggleHelp();
-          if (k === "w" || k === "W") UI.toggleWebcamBg();
-          if (k === "r" || k === "R") this.reset();
-          if (k === "d" || k === "D") UI.setDebug(!UI.debug);
-          if (k === "ArrowRight") { ParticleSystem.nextShape(); GestureEngine.enterCooldown(300); }
-          if (k === "ArrowLeft") { ParticleSystem.prevShape(); GestureEngine.enterCooldown(300); }
-          if (k === "ArrowUp") {
-            ParticleSystem.energy = clamp(ParticleSystem.energy + 0.35, 0.4, 2.4);
-            UI.flash("ENERGY +1", ParticleSystem.energy.toFixed(2));
-          }
-          if (k === "ArrowDown") {
-            ParticleSystem.energy = clamp(ParticleSystem.energy - 0.35, 0.4, 2.4);
-            UI.flash("ENERGY -1", ParticleSystem.energy.toFixed(2));
-          }
-          if (k === " ") {
-            e.preventDefault();
-            if (ParticleSystem.mode === "idle") GestureEngine.triggerExplosion();
-          }
-          if (k === "+" || k === "=") this.targetScale = clamp(this.targetScale + 0.1, CONFIG.minScale, CONFIG.maxScale);
-          if (k === "-" || k === "_") this.targetScale = clamp(this.targetScale - 0.1, CONFIG.minScale, CONFIG.maxScale);
-          if (/^[0-5]$/.test(k)) {
-            const n = parseInt(k, 10);
-            ParticleSystem.applyPalette(n, false);
-            UI.flash(`${n} FINGERS`, COLOR_PALETTES[n].name);
-          }
-        });
-      },
-
-      bindMouse() {
-        let lastX = 0, lastY = 0;
-        window.addEventListener("mousemove", (e) => {
-          if (GestureEngine.hands > 0) return;
-          const nx = e.clientX / window.innerWidth - 0.5;
-          const ny = e.clientY / window.innerHeight - 0.5;
-          Scene3D.setParallax(nx, -ny);
-          this.targetRot.y = nx * 0.8;
-          this.targetRot.x = ny * 0.5;
-          lastX = e.clientX;
-          lastY = e.clientY;
-          if (this.mouseDown) {
-            UI.setCharge(this.mouseCharge, e.clientX, e.clientY);
-          }
-        });
-        window.addEventListener("mousedown", (e) => {
-          if (GestureEngine.hands > 0) return;
-          if (UI.helpOpen) return;
-          this.mouseDown = true;
-          this.mouseCharge = 0;
-        });
-        window.addEventListener("mouseup", () => {
-          if (this.mouseDown && this.mouseCharge >= 0.98 && ParticleSystem.mode === "idle") {
-            GestureEngine.triggerExplosion();
-          }
-          this.mouseDown = false;
-          this.mouseCharge = 0;
-          UI.setCharge(0, 0, 0);
-        });
-        window.addEventListener("wheel", (e) => {
-          if (GestureEngine.hands > 0) return;
-          this.targetScale = clamp(
-            this.targetScale - Math.sign(e.deltaY) * 0.08,
-            CONFIG.minScale,
-            CONFIG.maxScale
-          );
-        }, { passive: true });
-      },
-
-      loop() {
-        requestAnimationFrame(() => this.loop());
-        const t0 = now();
-        const dt = Math.min((t0 - this.lastFrame) / 1000, 0.05);
-        this.lastFrame = t0;
-
-        // Mouse charge
-        if (this.mouseDown && GestureEngine.hands === 0) {
-          this.mouseCharge = clamp(this.mouseCharge + dt / (CONFIG.chargeDuration / 1000), 0, 1);
-          this.charge = this.mouseCharge;
-          UI.setHint(this.mouseCharge >= 1 ? "CHARGED — RELEASE" : "CHARGING…", true);
-        }
-
-        // Smooth transforms
-        const k = 1 - Math.exp(-6 * dt);
-        this.pos.lerp(this.targetPos, k);
-        this.rot.x = lerp(this.rot.x, this.targetRot.x, k);
-        this.rot.y = lerp(this.rot.y, this.targetRot.y, k);
-        this.rot.z = lerp(this.rot.z, this.targetRot.z, k);
-        this.scale = lerp(this.scale, this.targetScale, 1 - Math.exp(-5 * dt));
-
-        // Idle drift when no interaction
-        if (GestureEngine.hands === 0 && !this.mouseDown && GestureEngine.state === GESTURE.IDLE) {
-          const t = Scene3D.clock.getElapsedTime();
-          this.targetRot.y = Math.sin(t * 0.25) * 0.35;
-          this.targetRot.x = Math.cos(t * 0.2) * 0.12;
-        }
-
-        // Sync transform state after explosion finishes
-        if (
-          (GestureEngine.state === GESTURE.EXPLODING || GestureEngine.state === GESTURE.TRANSFORMING) &&
-          ParticleSystem.mode === "idle"
-        ) {
-          GestureEngine.enterCooldown(350);
-        }
-
-        ParticleSystem.update(dt);
-        Scene3D.render(this.pos, this.rot, this.scale);
-
-        this.renderLatency = now() - t0;
-
-        // FPS
-        this.fpsAccum += dt;
-        this.fpsFrames++;
-        if (this.fpsAccum >= 0.5) {
-          this.fps = Math.round(this.fpsFrames / this.fpsAccum);
-          this.fpsAccum = 0;
-          this.fpsFrames = 0;
-
-          if (this.fps < 28) {
-            this.lowFpsTimer += 0.5;
-            if (this.lowFpsTimer >= 4 && !this.perfMode) {
-              this.perfMode = true;
-              const reduced = Math.max(CONFIG.minParticleCount, Math.floor(ParticleSystem.count * 0.7));
-              ParticleSystem.reduceCount(reduced);
-              Scene3D.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
-              CONFIG.mediapipeFps = 22;
-              UI.flash("PERFORMANCE MODE", "ENABLED", 1800);
-            }
-          } else {
-            this.lowFpsTimer = Math.max(0, this.lowFpsTimer - 0.5);
-          }
-        }
-
-        UI.updateStatus({
-          hand: GestureEngine.hands === 0 ? "NONE" : GestureEngine.hands === 1 ? "DETECTED" : "TWO",
-          gesture: GestureEngine.lastLabel || GestureEngine.state,
-          shape: SHAPE_NAMES[ParticleSystem.shapeIndex].toUpperCase(),
-          particles: ParticleSystem.count,
-          fps: this.fps,
-        });
-
-        if (UI.debug) {
-          const d = GestureEngine.debug;
-          UI.els.debugText.innerHTML =
-            `HANDS ${GestureEngine.hands}<br>` +
-            `FINGERS ${GestureEngine.fingerCount}<br>` +
-            `PINCH ${GestureEngine.pinchRatio.toFixed(2)}<br>` +
-            `SWIPE VX ${d.swipeVx.toFixed(2)}<br>` +
-            `CENTER ${d.center.x.toFixed(2)},${d.center.y.toFixed(2)}<br>` +
-            `2H DIST ${d.twoDist.toFixed(2)}<br>` +
-            `STATE ${GestureEngine.state}<br>` +
-            `SHAPE ${SHAPE_NAMES[ParticleSystem.shapeIndex]}<br>` +
-            `SCALE ${this.scale.toFixed(2)}<br>` +
-            `ENERGY ${ParticleSystem.energy.toFixed(2)}<br>` +
-            `MP ${HandsVision.latency.toFixed(1)}ms<br>` +
-            `RENDER ${this.renderLatency.toFixed(1)}ms<br>` +
-            `CAM ${UI.camStatus}`;
-        }
-      },
-    };
-
-    // Boot
-    if (typeof THREE === "undefined") {
-      UI.showGate("Three.js failed to load. Check your network / CDN.", true);
-    } else {
-      App.init();
-    }
-  })();
-  </script>
-</body>
+      animate();
+    </script>
+  </body>
 </html>
