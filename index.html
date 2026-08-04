@@ -270,10 +270,8 @@
     <div id="info">
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
-        👋 <b>NGỬA TAY</b> → <span style="opacity: 0.6">HÌNH NẰM TRÊN TAY</span><br />
+        👋 <b>DI CHUYỂN TAY</b> → <span style="opacity: 0.6">XOAY HÌNH</span><br />
         🤏 <b>CHỤM</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
-        ✊ <b>NẮM TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
-        🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -317,21 +315,18 @@
       let handX = 0,
         handY = 0;
       let isPinching = false;
-      let isFist = false;
-      let isOpenPalm = false;
       let isFrozen = false;
       let handDetected = false;
 
       let lastPinchTime = 0;
 
-      // Palm overlay (keep original Hand-Sync visuals)
+      // Palm overlay — fixed size, hand controls view angle
       const palmPos = new THREE.Vector3();
       const palmPosTarget = new THREE.Vector3();
-      let palmScale = 0.38;
-      let palmScaleTarget = 0.38;
+      const FIXED_SCALE = 0.46;
       const statusHint = document.getElementById("status-hint");
       const colorObj = new THREE.Color();
-      const tmpScale = new THREE.Vector3();
+      const rotTarget = new THREE.Euler();
 
       // --- Scene Setup ---
       const scene = new THREE.Scene();
@@ -385,28 +380,19 @@
       );
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-      const baseParticleSize = isMobile ? 0.15 : 0.12;
       const material = new THREE.PointsMaterial({
-        size: baseParticleSize,
+        size: isMobile ? 0.15 : 0.12,
         vertexColors: true,
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.85,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         map: createHardCircleTexture(),
       });
 
       const particles = new THREE.Points(geometry, material);
+      particles.scale.setScalar(FIXED_SCALE);
       scene.add(particles);
-
-      // Stable palette per shape — only refreshed on pinch morph
-      const shapeHue = {
-        sphere: 0.55,
-        heart: 0.95,
-        saturn: 0.12,
-        flower: 0.82,
-        fireworks: 0.08,
-      };
 
       // --- Shapes Math ---
       const shapes = {
@@ -483,24 +469,6 @@
 
       targetPositions = getTargetPositions(currentShape);
 
-      function applyShapeColors() {
-        const colAttr = particles.geometry.attributes.color;
-        const base = shapeHue[currentShape] || 0.5;
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-          const ix = i * 3;
-          const dist = Math.hypot(
-            targetPositions[ix],
-            targetPositions[ix + 1],
-            targetPositions[ix + 2]
-          );
-          colorObj.setHSL((base + dist * 0.04) % 1, 0.72, 0.52);
-          colAttr.array[ix] = colorObj.r;
-          colAttr.array[ix + 1] = colorObj.g;
-          colAttr.array[ix + 2] = colorObj.b;
-        }
-        colAttr.needsUpdate = true;
-      }
-
       function cycleShape() {
         const now = Date.now();
         if (now - lastPinchTime < 4000) return;
@@ -512,12 +480,10 @@
           shapeNamesVi[currentShape] || currentShape;
 
         targetPositions = getTargetPositions(currentShape);
-        applyShapeColors();
         lastPinchTime = now;
       }
 
       function landmarkToWorld(x, y, out) {
-        // Mirrored fullscreen webcam → NDC → world at z≈0
         const ndcX = (1 - x) * 2 - 1;
         const ndcY = (1 - y) * 2 - 1;
         const vFOV = THREE.MathUtils.degToRad(camera.fov);
@@ -528,7 +494,6 @@
       }
 
       function updatePalmFromLandmarks(lm) {
-        // Palm center (toward middle of hand)
         const cx =
           (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5 * 0.4 +
           lm[9].x * 0.6;
@@ -536,14 +501,6 @@
           (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5 * 0.4 +
           lm[9].y * 0.6;
         landmarkToWorld(cx, cy, palmPosTarget);
-
-        // Fit original Hand-Sync formation (~radius 4) into the palm
-        const span = Math.hypot(lm[5].x - lm[17].x, lm[5].y - lm[17].y);
-        palmScaleTarget = THREE.MathUtils.clamp(
-          THREE.MathUtils.mapLinear(span, 0.08, 0.28, 0.28, 0.52),
-          0.26,
-          0.58
-        );
       }
 
       // --- Hand Tracking ---
@@ -582,28 +539,18 @@
           const isRingDown = lm[16].y > lm[14].y;
           const isPinkyDown = lm[20].y > lm[18].y;
 
-          isFist = isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
           isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
-          isOpenPalm =
-            !isIndexDown &&
-            !isMiddleDown &&
-            !isRingDown &&
-            !isPinkyDown &&
-            !isPinching;
 
           if (isFrozen) statusHint.textContent = "Đóng băng";
           else if (isPinching) statusHint.textContent = "Đổi hình…";
-          else if (isFist) statusHint.textContent = "Phóng to · trên lòng bàn tay";
-          else if (isOpenPalm) statusHint.textContent = "Thu nhỏ · trên lòng bàn tay";
-          else statusHint.textContent = "Hình đang nằm trên lòng bàn tay";
+          else statusHint.textContent = "Di chuyển tay để xoay · tốc độ chậm";
         } else {
           handDetected = false;
-          isFist = false;
-          isOpenPalm = false;
           isFrozen = false;
           isPinching = false;
+          handX = 0;
+          handY = 0;
           palmPosTarget.set(0, 0, 0);
-          palmScaleTarget = 0.38;
           statusHint.textContent = "Ngửa lòng bàn tay vào khung hình";
         }
       });
@@ -618,42 +565,23 @@
       cameraUtils.start();
 
       // --- Animation Loop ---
-      applyShapeColors();
-
       function animate() {
         requestAnimationFrame(animate);
         const posAttr = particles.geometry.attributes.position;
+        const colAttr = particles.geometry.attributes.color;
 
-        // Nest formation onto the palm (fullscreen webcam behind)
-        palmPos.lerp(palmPosTarget, 0.3);
-        palmScale += (palmScaleTarget - palmScale) * 0.18;
+        palmPos.lerp(palmPosTarget, 0.28);
         particles.position.copy(palmPos);
+        particles.scale.setScalar(FIXED_SCALE);
 
         if (!isFrozen) {
-          // Spin only from hand motion (gesture), not a free time drift
-          particles.rotation.y += handX * 0.018;
-          particles.rotation.x += handY * 0.01;
-
-          // Palm-fit scale × gesture scale
-          let gesture = 1.0;
-          if (isFist) gesture = 1.75;
-          else if (isOpenPalm) gesture = 0.55;
-          const s = palmScale * gesture * (handDetected ? 1 : 0.85);
-          tmpScale.set(s, s, s);
-          particles.scale.lerp(tmpScale, 0.14);
-
-          // Shrink packs particles → AdditiveBlending washes white; dim + smaller dots
-          const shrinkAmt = isOpenPalm ? 1 : 0;
-          const targetOpacity = isOpenPalm ? 0.42 : isFist ? 0.9 : 0.8;
-          const targetSize =
-            baseParticleSize * (isOpenPalm ? 0.55 : isFist ? 1.05 : 1);
-          material.opacity += (targetOpacity - material.opacity) * 0.2;
-          material.size += (targetSize - material.size) * 0.2;
-          // Avoid pure additive wash when tightly packed
-          material.blending =
-            shrinkAmt || particles.scale.x < palmScale * 0.7
-              ? THREE.NormalBlending
-              : THREE.AdditiveBlending;
+          // Absolute angle from hand position — slow, easy to aim a view
+          rotTarget.y = handX * 1.15;
+          rotTarget.x = handY * 0.85;
+          particles.rotation.y +=
+            (rotTarget.y - particles.rotation.y) * 0.045;
+          particles.rotation.x +=
+            (rotTarget.x - particles.rotation.x) * 0.045;
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
@@ -663,8 +591,17 @@
               (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.08;
             posAttr.array[ix + 2] +=
               (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
+
+            // Original Hand-Sync color (hand + depth)
+            const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
+            const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
+            colorObj.setHSL(hue, 0.8, 0.6);
+            colAttr.array[ix] = colorObj.r;
+            colAttr.array[ix + 1] = colorObj.g;
+            colAttr.array[ix + 2] = colorObj.b;
           }
           posAttr.needsUpdate = true;
+          colAttr.needsUpdate = true;
         }
 
         renderer.render(scene, camera);
