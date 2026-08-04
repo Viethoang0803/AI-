@@ -18,7 +18,7 @@ Dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talha
 
 | Cử chỉ | Hành động |
 |--------|-----------|
-| Di chuyển tay | Hình theo tay · xoay & đổi màu |
+| Ngửa lòng bàn tay (hướng camera) | Hình nằm trên lòng bàn tay |
 | Chụm ngón | Đổi hình (~4 giây/lần) |
 | Nắm tay | Phóng to |
 | Xòe lòng bàn tay | Thu nhỏ |

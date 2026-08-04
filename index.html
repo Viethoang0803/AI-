@@ -180,7 +180,7 @@
     <div id="info">
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
-        👋 DI CHUYỂN TAY → <span style="opacity: 0.65">XOAY & ĐỔI MÀU</span><br />
+        👋 <b>NGỬA LÒNG BÀN TAY</b> → <span style="opacity: 0.65">HÌNH NẰM TRÊN TAY</span><br />
         🤏 <b>CHỤM</b> → <span style="opacity: 0.65">ĐỔI HÌNH</span><br />
         ✊ <b>NẮM TAY</b> → <span style="opacity: 0.65">PHÓNG TO</span><br />
         🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.65">THU NHỎ</span><br />
@@ -232,12 +232,26 @@
       let isFrozen = false;
       let handDetected = false;
       let lastPinchTime = 0;
+      let palmFacingUp = false; // lòng bàn tay hướng về camera / ngửa lên
 
-      // Palm tracking for overlay-in-hand
+      // Palm tracking — shape rests on palm surface
       const palmWorld = new THREE.Vector3(0, 0, 0);
       const palmTarget = new THREE.Vector3(0, 0, 0);
+      const palmQuat = new THREE.Quaternion();
+      const palmQuatTarget = new THREE.Quaternion();
+      const _wrist = new THREE.Vector3();
+      const _index = new THREE.Vector3();
+      const _pinky = new THREE.Vector3();
+      const _mid = new THREE.Vector3();
+      const _vx = new THREE.Vector3();
+      const _vy = new THREE.Vector3();
+      const _vz = new THREE.Vector3();
+      const _mat = new THREE.Matrix4();
+      const _offset = new THREE.Vector3();
       let handFitScale = 1;
       let handFitTarget = 1;
+      let palmFaceAmount = 0; // 0 = úp, 1 = ngửa về camera
+
 
       const statusHint = document.getElementById("status-hint");
       const shapeNameEl = document.getElementById("current-shape-name");
@@ -300,8 +314,8 @@
       const particles = new THREE.Points(geometry, material);
       scene.add(particles);
 
-      // Compact base shapes so they can sit inside a palm
-      const BASE = 1.15;
+      // Compact, flatter shapes so they rest on the palm surface
+      const BASE = 0.95;
       const shapes = {
         sphere: (i) => {
           const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
@@ -309,7 +323,7 @@
           return [
             BASE * Math.cos(theta) * Math.sin(phi),
             BASE * Math.sin(theta) * Math.sin(phi),
-            BASE * Math.cos(phi),
+            BASE * Math.cos(phi) * 0.55,
           ];
         },
         heart: (i) => {
@@ -320,45 +334,37 @@
             5 * Math.cos(2 * phi) -
             2 * Math.cos(3 * phi) -
             Math.cos(4 * phi);
-          return [x * 0.07, y * 0.07, (Math.random() - 0.5) * 0.35];
+          return [x * 0.065, y * 0.065, (Math.random() - 0.5) * 0.12];
         },
         saturn: (i) => {
-          if (i < PARTICLE_COUNT * 0.6) {
-            const phi = Math.acos(-1 + (2 * i) / (PARTICLE_COUNT * 0.6));
-            const theta = Math.sqrt(PARTICLE_COUNT * 0.6 * Math.PI) * phi;
-            const r = BASE * 0.7;
+          if (i < PARTICLE_COUNT * 0.55) {
+            const phi = Math.acos(-1 + (2 * i) / (PARTICLE_COUNT * 0.55));
+            const theta = Math.sqrt(PARTICLE_COUNT * 0.55 * Math.PI) * phi;
+            const r = BASE * 0.55;
             return [
               r * Math.cos(theta) * Math.sin(phi),
               r * Math.sin(theta) * Math.sin(phi),
-              r * Math.cos(phi),
+              r * Math.cos(phi) * 0.55,
             ];
           }
           const angle = Math.random() * Math.PI * 2;
-          const r = BASE * 1.05 + Math.random() * 0.35;
-          return [
-            r * Math.cos(angle),
-            (Math.random() - 0.5) * 0.12,
-            r * Math.sin(angle),
-          ];
+          const r = BASE * 0.85 + Math.random() * 0.28;
+          return [r * Math.cos(angle), r * Math.sin(angle), (Math.random() - 0.5) * 0.08];
         },
         flower: (i) => {
-          const u = Math.random() * Math.PI * 2;
-          const v = Math.random() * Math.PI;
-          const r = BASE * 0.75 + Math.sin(5 * u) * Math.sin(5 * v) * 0.35;
-          return [
-            r * Math.sin(v) * Math.cos(u),
-            r * Math.sin(v) * Math.sin(u),
-            r * Math.cos(v) * 0.7,
-          ];
+          const a = (i / PARTICLE_COUNT) * Math.PI * 2;
+          const fill = Math.sqrt(Math.random());
+          const r = (0.25 + 0.7 * Math.abs(Math.cos(a * 3))) * fill * BASE;
+          return [Math.cos(a) * r, Math.sin(a) * r, (Math.random() - 0.5) * 0.1];
         },
         fireworks: (i) => {
-          const r = Math.pow(Math.random(), 1 / 3) * BASE * 1.4;
+          const r = Math.pow(Math.random(), 1 / 3) * BASE * 1.1;
           const theta = Math.random() * Math.PI * 2;
           const phi = Math.acos(2 * Math.random() - 1);
           return [
             r * Math.sin(phi) * Math.cos(theta),
             r * Math.sin(phi) * Math.sin(theta),
-            r * Math.cos(phi),
+            r * Math.cos(phi) * 0.5,
           ];
         },
       };
@@ -387,9 +393,9 @@
         statusHint.textContent = "Đã đổi hình: " + shapeNamesVi[currentShape];
       }
 
-      // Landmark → world position on plane z ≈ 0 (matches mirrored fullscreen video)
+      // Landmark → world (mirrored fullscreen video)
       function landmarkToWorld(x, y, out) {
-        const ndcX = (1 - x) * 2 - 1; // mirrored like CSS scaleX(-1)
+        const ndcX = (1 - x) * 2 - 1;
         const ndcY = (1 - y) * 2 - 1;
         const vFOV = THREE.MathUtils.degToRad(camera.fov);
         const dist = camera.position.z;
@@ -399,18 +405,63 @@
       }
 
       function palmCenter(lm) {
+        // Slightly toward fingers so shape sits in the palm bowl, not on wrist
         const idxs = [0, 5, 9, 13, 17];
         let x = 0, y = 0;
         for (const i of idxs) {
           x += lm[i].x;
           y += lm[i].y;
         }
-        return { x: x / idxs.length, y: y / idxs.length };
+        x = x / idxs.length * 0.65 + lm[9].x * 0.35;
+        y = y / idxs.length * 0.65 + lm[9].y * 0.35;
+        return { x, y };
       }
 
       function handSpan(lm) {
-        // Wrist → middle fingertip, normalized by image space
-        return Math.hypot(lm[12].x - lm[0].x, lm[12].y - lm[0].y);
+        return Math.hypot(lm[5].x - lm[17].x, lm[5].y - lm[17].y);
+      }
+
+      // Build palm basis: XY = palm surface, Z = outward normal (toward camera when ngửa)
+      function updatePalmPose(lm) {
+        landmarkToWorld(lm[0].x, lm[0].y, _wrist);
+        landmarkToWorld(lm[5].x, lm[5].y, _index);
+        landmarkToWorld(lm[17].x, lm[17].y, _pinky);
+        landmarkToWorld(lm[9].x, lm[9].y, _mid);
+
+        // Across palm (index ↔ pinky), along fingers (wrist → middle)
+        _vx.subVectors(_index, _pinky).normalize();
+        _vy.subVectors(_mid, _wrist).normalize();
+        _vz.crossVectors(_vx, _vy).normalize();
+
+        // Palm facing camera / "ngửa lên" → normal points toward camera (+Z)
+        if (_vz.z < 0) _vz.negate();
+
+        // Re-orthogonalize
+        _vx.crossVectors(_vy, _vz).normalize();
+        _vy.crossVectors(_vz, _vx).normalize();
+
+        _mat.makeBasis(_vx, _vy, _vz);
+        palmQuatTarget.setFromRotationMatrix(_mat);
+
+        // How much palm faces camera (0 úp tay → 1 ngửa)
+        palmFaceAmount = THREE.MathUtils.clamp(_vz.z, 0, 1);
+        palmFacingUp = palmFaceAmount > 0.35;
+
+        const palm = palmCenter(lm);
+        landmarkToWorld(palm.x, palm.y, palmTarget);
+        // Lift shape slightly along normal so it sits ON the palm, not inside it
+        _offset.copy(_vz).multiplyScalar(0.18 + palmFaceAmount * 0.12);
+        palmTarget.add(_offset);
+
+        // Fit to palm width
+        const span = handSpan(lm);
+        handFitTarget = THREE.MathUtils.clamp(
+          THREE.MathUtils.mapLinear(span, 0.08, 0.28, 0.5, 1.15),
+          0.4,
+          1.25
+        );
+        // Shrink when palm is not facing up so it doesn't float oddly
+        if (!palmFacingUp) handFitTarget *= 0.35;
       }
 
       // --- Hand tracking ---
@@ -434,17 +485,7 @@
           const lm = results.multiHandLandmarks[0];
           handDetected = true;
 
-          const palm = palmCenter(lm);
-          landmarkToWorld(palm.x, palm.y, palmTarget);
-
-          // Fit shape into palm: map hand span → scale
-          const span = handSpan(lm);
-          // Typical open-hand span ~0.18–0.45 in landmark space
-          handFitTarget = THREE.MathUtils.clamp(
-            THREE.MathUtils.mapLinear(span, 0.12, 0.42, 0.55, 1.35),
-            0.45,
-            1.5
-          );
+          updatePalmPose(lm);
 
           handX = (1 - lm[8].x) * 2 - 1;
           handY = (1 - lm[8].y) * 2 - 1;
@@ -467,21 +508,18 @@
             !isPinkyDown &&
             !isPinching;
 
-          if (isFrozen) {
+          if (!palmFacingUp) {
+            statusHint.textContent = "Ngửa lòng bàn tay lên để hình nằm trên tay";
+          } else if (isFrozen) {
             statusHint.textContent = "Đóng băng";
-            videoElement.style.filter = "brightness(0.85) saturate(0.7)";
           } else if (isPinching) {
             statusHint.textContent = "Đổi hình…";
-            videoElement.style.filter = "brightness(0.9)";
           } else if (isFist) {
-            statusHint.textContent = "Phóng to";
-            videoElement.style.filter = "brightness(1.05)";
+            statusHint.textContent = "Phóng to · hình trên lòng bàn tay";
           } else if (isOpenPalm) {
-            statusHint.textContent = "Thu nhỏ · hình trong lòng bàn tay";
-            videoElement.style.filter = "brightness(1)";
+            statusHint.textContent = "Thu nhỏ · hình nằm trên lòng bàn tay";
           } else {
-            statusHint.textContent = "Hình đang nằm trên tay bạn";
-            videoElement.style.filter = "brightness(1)";
+            statusHint.textContent = "Hình đang nằm trên lòng bàn tay";
           }
         } else {
           handDetected = false;
@@ -489,10 +527,12 @@
           isOpenPalm = false;
           isFrozen = false;
           isPinching = false;
+          palmFacingUp = false;
+          palmFaceAmount = 0;
           palmTarget.set(0, 0, 0);
-          handFitTarget = 1;
-          statusHint.textContent = "Đưa tay vào khung hình";
-          videoElement.style.filter = "brightness(0.85)";
+          palmQuatTarget.identity();
+          handFitTarget = 0.6;
+          statusHint.textContent = "Ngửa lòng bàn tay vào khung hình";
         }
       });
 
@@ -516,42 +556,50 @@
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
-        // Smooth follow palm
-        palmWorld.lerp(palmTarget, 0.22);
-        handFitScale += (handFitTarget - handFitScale) * 0.15;
+        // Follow palm position + orientation (shape lies on palm surface)
+        palmWorld.lerp(palmTarget, 0.28);
+        palmQuat.slerp(palmQuatTarget, 0.28);
+        handFitScale += (handFitTarget - handFitScale) * 0.18;
+
         particles.position.copy(palmWorld);
+        particles.quaternion.copy(palmQuat);
+
+        // Visibility: stronger when palm faces up toward camera
+        const faceVis = handDetected ? 0.25 + palmFaceAmount * 0.75 : 0.2;
+        material.opacity = faceVis * 0.95;
 
         if (!isFrozen) {
-          // Light spin tied to fingertip motion
-          particles.rotation.y += 0.002 + handX * 0.025;
-          particles.rotation.x += handY * 0.012;
+          // Tiny living shimmer only — orientation comes from the palm
+          // (no free orbit that lifts the shape off the hand)
 
-          // Gesture scale × palm-fit scale → shape stays in hand
           let gestureScale = 1.0;
-          if (isFist) gestureScale = 1.55;
-          else if (isOpenPalm) gestureScale = 0.55;
-          const s = handFitScale * gestureScale * (handDetected ? 1 : 0.85);
+          if (isFist) gestureScale = 1.45;
+          else if (isOpenPalm) gestureScale = 0.62;
+          const s =
+            handFitScale *
+            gestureScale *
+            (handDetected ? 0.85 + palmFaceAmount * 0.2 : 0.5);
           tmpScale.set(s, s, s);
-          particles.scale.lerp(tmpScale, 0.14);
+          particles.scale.lerp(tmpScale, 0.16);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
-            posAttr.array[ix] += (targetPositions[ix] - posAttr.array[ix]) * 0.08;
+            posAttr.array[ix] += (targetPositions[ix] - posAttr.array[ix]) * 0.1;
             posAttr.array[ix + 1] +=
-              (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.08;
+              (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.1;
             posAttr.array[ix + 2] +=
-              (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
+              (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.1;
 
             if (currentShape !== "fireworks") {
-              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.003;
-              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.003;
+              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.002;
+              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.002;
             } else {
-              posAttr.array[ix + 1] -= 0.012;
-              if (posAttr.array[ix + 1] < -2.2) posAttr.array[ix + 1] = 2.2;
+              posAttr.array[ix + 1] -= 0.01;
+              if (posAttr.array[ix + 1] < -1.6) posAttr.array[ix + 1] = 1.6;
             }
 
             const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
-            const hue = ((handY + 1) * 0.5 + dist * 0.18) % 1;
+            const hue = ((handY + 1) * 0.5 + dist * 0.2) % 1;
             colorObj.setHSL(hue, 0.85, 0.62);
             colAttr.array[ix] = colorObj.r;
             colAttr.array[ix + 1] = colorObj.g;
