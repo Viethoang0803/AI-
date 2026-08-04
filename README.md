@@ -26,7 +26,7 @@ Dựa trên [talhahSalman/Hand-Sync-3D-Particle-System](https://github.com/talha
 
 ## Các hình
 
-Quả cầu · Trái tim · Sao Thổ · Bông hoa · Pháo hoa
+Quả cầu · Trái tim · Sao Thổ · Bông hoa · Ngôi sao · Torus · Lập phương · Vô cực · Xoắn ốc · ADN · Pháo hoa
 
 ## Chạy local
 
