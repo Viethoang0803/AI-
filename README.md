@@ -16,9 +16,12 @@
 |--------|-----------|
 | 1 tay | Quả cầu theo lòng bàn tay (mượt) |
 | 2 tay | Khoảng cách 2 tay → phóng to / thu nhỏ |
+| Nghiêng / xoay tay | Chỉnh góc quay vật thể |
+| Vẫy tay xòe | Đổi hình |
 | Chụm cái + trỏ (giữ) | Tích năng lượng |
-| Xòe / mở tay (sau khi tích) | Nổ |
-| Giơ 2 ngón giữ | Đổi hình |
+| Xòe / mở tay (sau khi tích) | Nổ — bay 5s rồi mới tụ lại |
+
+3000 hạt, nhiều màu sáng.
 
 ## Hình
 

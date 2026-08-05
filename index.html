@@ -237,10 +237,11 @@
     </div>
 
     <div id="hints">
-      1 tay → quả cầu nằm trên lòng bàn tay<br />
+      1 tay → quả cầu trên lòng bàn tay<br />
       2 tay → kéo xa để mở rộng<br />
-      ✌️ 2 ngón giữ → đổi hình<br />
-      Chụm cái+trỏ giữ → tích · xòe tay → nổ
+      Nghiêng / xoay tay → chỉnh góc quay<br />
+      Vẫy tay xòe → đổi hình<br />
+      Chụm cái+trỏ → tích · mở tay → nổ (5s rồi tụ)
     </div>
 
     <div id="loading">
@@ -262,7 +263,7 @@
 
     <script>
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const PARTICLE_COUNT = isMobile ? 5000 : 10000;
+      const PARTICLE_COUNT = 3000;
 
       let currentShape = "sphere";
       const shapeList = [
@@ -294,19 +295,27 @@
       let radiusTarget = 0.55;
       let handRotX = 0;
       let handRotY = 0;
+      let handRotZ = 0;
+      let rotTargetX = 0;
+      let rotTargetY = 0;
+      let rotTargetZ = 0;
 
       let wasPinching = false;
-      let peaceHoldMs = 0;
       let lastMorphTime = 0;
       let explodeChargeMs = 0;
       let explodeReady = false;
       let exploding = false;
       let explodeUntil = 0;
       let lastExplodeTime = 0;
+      let gatherSpeed = 0.1;
       const EXPLODE_CHARGE_MS = 350;
+      const EXPLODE_FLIGHT_MS = 5000;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
+      let lastPalmX = 0.5;
+      let waveVelSmooth = 0;
+      let lastWaveTime = 0;
 
       const videoEl = document.getElementById("webcam");
       const loadingEl = document.getElementById("loading");
@@ -349,7 +358,8 @@
         const ctx = c.getContext("2d");
         const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.45, "rgba(255,255,255,0.85)");
+        g.addColorStop(0.25, "rgba(255,255,255,1)");
+        g.addColorStop(0.55, "rgba(255,255,255,0.75)");
         g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, 64, 64);
@@ -367,10 +377,10 @@
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
-        size: isMobile ? 0.045 : 0.035,
+        size: isMobile ? 0.07 : 0.058,
         vertexColors: true,
         transparent: true,
-        opacity: 0.9,
+        opacity: 1,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         map: createDotTexture(),
@@ -537,12 +547,30 @@
 
       function cycleShape() {
         const now = Date.now();
-        if (now - lastMorphTime < 1800 || exploding) return;
+        if (now - lastMorphTime < 1000 || exploding) return;
         shapeIndex = (shapeIndex + 1) % shapeList.length;
         currentShape = shapeList[shapeIndex];
         shapeNameEl.textContent = shapeNamesVi[currentShape];
         rebuildTargets();
         lastMorphTime = now;
+      }
+
+      function particleColor(i, x, y, z, t, out) {
+        const dist = Math.hypot(x, y, z);
+        const hue =
+          (i / PARTICLE_COUNT * 0.85 +
+            dist * 0.12 +
+            t * 0.06 +
+            handRotY * 0.1 +
+            Math.sin(i * 0.17) * 0.08) %
+          1;
+        const sat = 0.72 + 0.28 * Math.sin(i * 0.31 + t);
+        const light = 0.62 + 0.22 * Math.cos(dist * 2.2 + t * 1.4);
+        out.setHSL((hue + 1) % 1, sat, light);
+        // Tăng độ sáng cho blending additive
+        out.r = Math.min(1, out.r * 1.45);
+        out.g = Math.min(1, out.g * 1.45);
+        out.b = Math.min(1, out.b * 1.45);
       }
 
       function landmarkToWorld(x, y, out) {
@@ -577,23 +605,34 @@
 
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastExplodeTime < 1200) return;
+        if (now - lastExplodeTime < 5500) return;
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
         exploding = true;
-        explodeUntil = now + 1800;
+        explodeUntil = now + EXPLODE_FLIGHT_MS;
+        gatherSpeed = 0.028;
+        shapeNameEl.textContent = "Đang nổ…";
         const pos = particles.geometry.attributes.position.array;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const ix = i * 3;
-          const x = pos[ix];
-          const y = pos[ix + 1];
-          const z = pos[ix + 2];
-          const len = Math.hypot(x, y, z) || 1;
-          const power = (0.04 + Math.random() * 0.08) * Math.max(radius, 0.4);
-          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.02;
-          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.02;
-          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.02;
+          let x = pos[ix];
+          let y = pos[ix + 1];
+          let z = pos[ix + 2];
+          let len = Math.hypot(x, y, z);
+          if (len < 0.05) {
+            const a = Math.random() * Math.PI * 2;
+            const b = Math.acos(2 * Math.random() - 1);
+            x = Math.sin(b) * Math.cos(a);
+            y = Math.sin(b) * Math.sin(a);
+            z = Math.cos(b);
+            len = 1;
+          }
+          // Vận tốc mạnh để bay phủ màn hình trong ~5s
+          const power = (0.18 + Math.random() * 0.28) * Math.max(radius, 0.45);
+          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.06;
+          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.06;
+          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.06;
         }
       }
 
@@ -625,10 +664,12 @@
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
           explodeReady = false;
           wasPinching = false;
+          waveVelSmooth *= 0.85;
           radiusTarget = THREE.MathUtils.lerp(radiusTarget, 0.55, 0.05);
           palmPosTarget.set(0, 0, 0);
-          handRotX *= 0.9;
-          handRotY *= 0.9;
+          handRotX *= 0.92;
+          handRotY *= 0.92;
+          handRotZ *= 0.92;
           updateStats();
           return;
         }
@@ -663,16 +704,23 @@
           );
         }
 
-        // Xoay nhẹ theo tay
-        handRotY = (1 - primary[8].x) * 2 - 1;
-        handRotX = (1 - primary[8].y) * 2 - 1;
+        // Xoay theo hướng lòng bàn tay (có thể chỉnh góc)
+        const wrist = primary[0];
+        const mid = primary[9];
+        const idxMcp = primary[5];
+        const pnkMcp = primary[17];
+        handRotY = THREE.MathUtils.clamp((0.5 - mid.x) * 2.4, -1.4, 1.4);
+        handRotX = THREE.MathUtils.clamp((mid.y - wrist.y - 0.25) * 3.2, -1.2, 1.2);
+        handRotZ = THREE.MathUtils.clamp((pnkMcp.y - idxMcp.y) * 4.5, -1.2, 1.2);
+        rotTargetY = handRotY * 1.35;
+        rotTargetX = handRotX * 1.1;
+        rotTargetZ = handRotZ * 0.9;
 
         // Khoảng cách cái ↔ trỏ (chuẩn hóa MediaPipe 0–1)
         const pinchDist = Math.hypot(
           primary[4].x - primary[8].x,
           primary[4].y - primary[8].y
         );
-        // Chụm: ngưỡng rộng (~9cm tương đối) để dễ kích hoạt trên webcam
         const isPinching = pinchDist < 0.09;
 
         const indexUp = primary[8].y < primary[6].y;
@@ -681,18 +729,23 @@
         const pinkyUp = primary[20].y < primary[18].y;
         const isOpenPalm =
           indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.08;
-        const isPeace =
-          indexUp && middleUp && !ringUp && !pinkyUp && !isPinching;
 
-        // Đổi hình: giơ 2 ngón (peace) giữ ~0.45s
-        if (isPeace && handCount === 1) {
-          peaceHoldMs += dt * 1000;
-          if (peaceHoldMs > 450) {
-            cycleShape();
-            peaceHoldMs = -600;
-          }
-        } else {
-          peaceHoldMs = Math.max(0, peaceHoldMs - dt * 500);
+        // Vẫy tay (xòe) nhanh → đổi hình
+        const palmX = mid.x;
+        const vx = (palmX - lastPalmX) / Math.max(dt, 0.008);
+        waveVelSmooth = waveVelSmooth * 0.55 + vx * 0.45;
+        lastPalmX = palmX;
+        if (
+          isOpenPalm &&
+          handCount === 1 &&
+          !isPinching &&
+          !exploding &&
+          Math.abs(waveVelSmooth) > 2.2 &&
+          Date.now() - lastWaveTime > 900
+        ) {
+          cycleShape();
+          lastWaveTime = Date.now();
+          waveVelSmooth = 0;
         }
 
         // Nổ: CHỤM cái+trỏ giữ = TÍCH → NHẢ / XÒE = NỔ
@@ -707,7 +760,6 @@
           explodeReady &&
           (justReleasedPinch || isOpenPalm || pinchDist > 0.14)
         ) {
-          // Nhả chụm hoặc xòe tay → nổ
           triggerExplode();
         } else if (!isPinching && !explodeReady) {
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 500);
@@ -749,35 +801,68 @@
         particles.position.copy(palmPos);
         particles.scale.setScalar(radius);
 
-        // Xoay nhẹ theo tay
-        particles.rotation.y += 0.004 + handRotY * 0.035;
-        particles.rotation.x += handRotX * 0.018;
+        // Xoay theo tay (có thể chỉnh) + spin nhẹ nền
+        particles.rotation.x +=
+          (rotTargetX - particles.rotation.x) * 0.1 + handRotX * 0.008;
+        particles.rotation.y +=
+          (rotTargetY - particles.rotation.y) * 0.09 + 0.003 + handRotY * 0.012;
+        particles.rotation.z += (rotTargetZ - particles.rotation.z) * 0.1;
 
         if (exploding) {
+          const remain = Math.max(0, explodeUntil - now);
+          const flightT = 1 - remain / EXPLODE_FLIGHT_MS;
+          // Giảm ma sát dần để hạt còn bay xa tới hết 5s
+          const drag = 0.994 - flightT * 0.004;
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
             pos.array[ix] += explodeVel[ix];
             pos.array[ix + 1] += explodeVel[ix + 1];
             pos.array[ix + 2] += explodeVel[ix + 2];
-            explodeVel[ix] *= 0.98;
-            explodeVel[ix + 1] *= 0.98;
-            explodeVel[ix + 2] *= 0.98;
+            explodeVel[ix] *= drag;
+            explodeVel[ix + 1] *= drag;
+            explodeVel[ix + 2] *= drag;
+
+            particleColor(
+              i,
+              pos.array[ix],
+              pos.array[ix + 1],
+              pos.array[ix + 2],
+              t,
+              colorObj
+            );
+            col.array[ix] = colorObj.r;
+            col.array[ix + 1] = colorObj.g;
+            col.array[ix + 2] = colorObj.b;
           }
           pos.needsUpdate = true;
-          if (now > explodeUntil) exploding = false;
+          col.needsUpdate = true;
+          shapeNameEl.textContent =
+            "Bay tóe… " + Math.ceil(remain / 1000) + "s";
+          if (now > explodeUntil) {
+            exploding = false;
+            gatherSpeed = 0.028;
+            shapeNameEl.textContent = "Đang tụ lại…";
+          }
         } else {
+          gatherSpeed = Math.min(0.1, gatherSpeed + 0.00055);
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
-            pos.array[ix] += (targetPositions[ix] - pos.array[ix]) * 0.1;
-            pos.array[ix + 1] += (targetPositions[ix + 1] - pos.array[ix + 1]) * 0.1;
-            pos.array[ix + 2] += (targetPositions[ix + 2] - pos.array[ix + 2]) * 0.1;
+            pos.array[ix] += (targetPositions[ix] - pos.array[ix]) * gatherSpeed;
+            pos.array[ix + 1] +=
+              (targetPositions[ix + 1] - pos.array[ix + 1]) * gatherSpeed;
+            pos.array[ix + 2] +=
+              (targetPositions[ix + 2] - pos.array[ix + 2]) * gatherSpeed;
             pos.array[ix] += Math.sin(t * 0.8 + i) * 0.0015;
             pos.array[ix + 1] += Math.cos(t * 0.8 + i) * 0.0015;
 
-            const dist = Math.hypot(pos.array[ix], pos.array[ix + 1]);
-            // Magenta / pink như ảnh mẫu
-            const hue = (0.85 + dist * 0.08 + handRotY * 0.04) % 1;
-            colorObj.setHSL(hue, 0.75, 0.62);
+            particleColor(
+              i,
+              pos.array[ix],
+              pos.array[ix + 1],
+              pos.array[ix + 2],
+              t,
+              colorObj
+            );
             col.array[ix] = colorObj.r;
             col.array[ix + 1] = colorObj.g;
             col.array[ix + 2] = colorObj.b;
@@ -788,10 +873,12 @@
 
         if (explodeReady) {
           shapeNameEl.textContent = "Đã tích · mở tay để nổ";
-        } else if (explodeChargeMs > 40) {
+        } else if (explodeChargeMs > 40 && !exploding) {
           shapeNameEl.textContent =
-            "Tích nổ " + Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100) + "%";
-        } else if (!exploding) {
+            "Tích nổ " +
+            Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100) +
+            "%";
+        } else if (!exploding && gatherSpeed > 0.08) {
           shapeNameEl.textContent = shapeNamesVi[currentShape];
         }
 
