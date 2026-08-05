@@ -271,9 +271,9 @@
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
         👋 DI CHUYỂN → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
-        🤏 <b>CHỤM CÁI+TRỎ</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
+        🤏 <b>CHỤM CÁI + TRỎ</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
         ✊ <b>NẮM ĐẤM</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
-        🤏 <b>CHỤM HẾT VÀO CÁI · TÍCH · XÒE</b> → <span style="opacity: 0.6">NỔ</span><br />
+        🤏 <b>BÓ HẾT VÀO CÁI · TÍCH · MỞ</b> → <span style="opacity: 0.6">NỔ</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -333,6 +333,7 @@
       let handX = 0,
         handY = 0;
       let isPinching = false;
+      let wasPinching = false;
       let isFist = false;
       let isFrozen = false;
       let lastPinchTime = 0;
@@ -343,7 +344,7 @@
       let exploding = false;
       let explodeUntil = 0;
       let lastExplodeTime = 0;
-      const EXPLODE_CHARGE_MS = 700;
+      const EXPLODE_CHARGE_MS = 550;
       let lastFrameTime = performance.now();
 
       // Scale vừa khung hình (đặc biệt điện thoại)
@@ -615,8 +616,8 @@
 
       function cycleShape() {
         const now = Date.now();
-        if (now - lastPinchTime < 4000) return;
-        if (exploding || explodeChargeMs > 100) return;
+        if (now - lastPinchTime < 2200) return;
+        if (exploding) return;
 
         shapeIndex = (shapeIndex + 1) % shapeList.length;
         currentShape = shapeList[shapeIndex];
@@ -626,30 +627,19 @@
 
         targetPositions = getTargetPositions(currentShape);
         lastPinchTime = now;
+        statusHint.textContent =
+          "Đổi hình · " + (shapeNamesVi[currentShape] || currentShape);
       }
 
-      function tipClusterSpread(lm) {
-        const tips = [lm[4], lm[8], lm[12], lm[16], lm[20]];
-        let cx = 0,
-          cy = 0;
-        for (const t of tips) {
-          cx += t.x;
-          cy += t.y;
-        }
-        cx /= 5;
-        cy /= 5;
-        let s = 0;
-        for (const t of tips) s += Math.hypot(t.x - cx, t.y - cy);
-        return s / 5;
+      function distTip(a, b) {
+        return Math.hypot(a.x - b.x, a.y - b.y);
       }
 
       function tipToThumbStats(lm) {
-        const ds = [8, 12, 16, 20].map((i) =>
-          Math.hypot(lm[4].x - lm[i].x, lm[4].y - lm[i].y)
-        );
+        const ds = [8, 12, 16, 20].map((i) => distTip(lm[4], lm[i]));
         const avg = (ds[0] + ds[1] + ds[2] + ds[3]) / 4;
         const max = Math.max(ds[0], ds[1], ds[2], ds[3]);
-        return { avg, max };
+        return { avg, max, ds };
       }
 
       function triggerExplode() {
@@ -703,6 +693,7 @@
         ) {
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
           explodeReady = false;
+          wasPinching = false;
           statusHint.textContent = "Đưa tay vào khung webcam";
           return;
         }
@@ -722,52 +713,61 @@
           (!isRingDown ? 1 : 0) +
           (!isPinkyDown ? 1 : 0);
 
-        const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
-        const cluster = tipClusterSpread(lm);
-        const { avg: tipThumbAvg, max: tipThumbMax } = tipToThumbStats(lm);
-        const isOpenPalm = fingersUp >= 4 && pinchDist > 0.08 && cluster > 0.09;
+        const pinchDist = distTip(lm[4], lm[8]);
+        const { avg: tipThumbAvg, max: tipThumbMax, ds } = tipToThumbStats(lm);
+        const [dIndex, dMiddle, dRing, dPinky] = ds;
 
-        // Nắm đấm (phóng to): 4 ngón co, ngón cái nằm BÊN cạnh — không chụm vào cái
+        // --- Ưu tiên: nắm đấm → nổ → đổi hình ---
+        // Nắm đấm: 4 ngón co, cái nằm bên (xa đầu ngón)
         isFist =
           isIndexDown &&
           isMiddleDown &&
           isRingDown &&
           isPinkyDown &&
-          tipThumbAvg > 0.07;
+          tipThumbAvg > 0.085;
 
-        // Nổ: chụm TẤT CẢ đầu ngón VÀO NGÓN CÁI (bó ngón) — khác nắm đấm
+        // Nổ: cả 4 đầu ngón đều gần ngón cái (bó lại)
         const explodePose =
           !isFist &&
-          tipThumbAvg < 0.052 &&
-          tipThumbMax < 0.072 &&
-          cluster < 0.042;
+          dIndex < 0.08 &&
+          dMiddle < 0.08 &&
+          dRing < 0.085 &&
+          dPinky < 0.09 &&
+          tipThumbAvg < 0.07 &&
+          tipThumbMax < 0.1;
 
-        // 1) Nổ: bó ngón vào cái → tích → xòe
+        // Xòe / nhả sau khi tích (không cần xòe hết 4 ngón)
+        const releasedOpen =
+          tipThumbAvg > 0.13 && (fingersUp >= 2 || pinchDist > 0.1);
+
         if (!exploding && explodePose) {
           explodeChargeMs += dt * 1000;
           if (explodeChargeMs >= EXPLODE_CHARGE_MS) {
             explodeReady = true;
             explodeChargeMs = EXPLODE_CHARGE_MS;
           }
-        } else if (explodeReady && isOpenPalm) {
+        } else if (explodeReady && releasedOpen) {
           triggerExplode();
         } else if (isFist) {
-          // đang nắm đấm → hủy tích nổ ngay, ưu tiên phóng to
           explodeChargeMs = 0;
           explodeReady = false;
         } else if (!explodePose) {
-          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 500);
-          if (explodeChargeMs < EXPLODE_CHARGE_MS * 0.55) explodeReady = false;
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 350);
+          if (explodeChargeMs < EXPLODE_CHARGE_MS * 0.4) explodeReady = false;
         }
 
-        // 2) Đổi hình: chỉ cái+trỏ (các ngón kia không chụm vào cái)
+        // Đổi hình: chụm cái + trỏ (Hand-Sync gốc), cạnh lên để không spam
+        // Không phải nắm đấm / không đang bó cả bàn để nổ
         isPinching =
-          pinchDist < 0.045 &&
-          tipThumbAvg > 0.08 &&
-          !explodePose &&
+          pinchDist < 0.06 &&
           !isFist &&
-          explodeChargeMs < 80;
-        if (isPinching) cycleShape();
+          !explodePose &&
+          explodeChargeMs < 200 &&
+          // ít nhất 1 trong middle/ring/pinky không dính cái (tránh nhầm bó nổ)
+          (dMiddle > 0.055 || dRing > 0.055 || dPinky > 0.055);
+
+        if (isPinching && !wasPinching) cycleShape();
+        wasPinching = isPinching;
 
         isFrozen =
           !isIndexDown &&
@@ -786,11 +786,11 @@
           statusHint.textContent = "Nắm đấm · phóng to";
           videoElement.style.borderColor = "var(--accent)";
           videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
-        } else if (explodeChargeMs > 40 || explodeReady) {
+        } else if (explodeChargeMs > 50 || explodeReady) {
           const pct = Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100);
           statusHint.textContent = explodeReady
-            ? "Đã tích đầy · XÒE TAY để nổ!"
-            : "Chụm vào cái · tích " + pct + "%…";
+            ? "Đã tích · MỞ TAY ra để nổ!"
+            : "Bó ngón vào cái · tích " + pct + "%";
           videoElement.style.borderColor = "var(--snap)";
           videoElement.style.boxShadow = "0 0 22px rgba(251, 191, 36, 0.5)";
         } else if (isFrozen) {
@@ -803,7 +803,7 @@
           videoElement.style.boxShadow = "none";
         } else {
           statusHint.textContent =
-            "Nắm đấm phóng to · chụm hết vào cái để nổ";
+            "Chụm cái+trỏ đổi hình · bó hết vào cái rồi mở để nổ";
           videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
           videoElement.style.boxShadow = "none";
         }
