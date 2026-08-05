@@ -182,10 +182,11 @@
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
         🖐️ <b>XÒE + DI CHUYỂN</b> → <span style="opacity: 0.6">XOAY 360°</span><br />
-        ✊ <b>NẮM TAY</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
-        🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
+        ✊ <b>NẮM GIỮ</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
+        🖐️ <b>XÒE GIỮ YÊN</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
         🤏 <b>CHỤM (3 NGÓN CO)</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
         🫰 <b>GIỮ CÁI+GIỮA RỒI BÚNG</b> → <span style="opacity: 0.6">VỠ TUNG</span><br />
+        ✌️ <b>2 NGÓN GIỮ</b> → <span style="opacity: 0.6">CỠ VỪA</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -267,11 +268,19 @@
       let exploding = false;
       let explodeUntil = 0;
 
-      let scaleTarget = 1.0;
+      // Kích thước: mặc định vừa khung · sticky + delay để không nhảy liên tục
+      const SCALE_FIT = 0.88;
+      const SCALE_SMALL = 0.38;
+      const SCALE_BIG = 1.85;
+      const SCALE_HOLD_MS = 420;
+      let scaleMode = "fit"; // fit | small | big
+      let scaleTarget = SCALE_FIT;
+      let scalePending = null;
+      let scaleHoldMs = 0;
       let lastFrameTime = performance.now();
 
       const colorObj = new THREE.Color();
-      const tmpScale = new THREE.Vector3(1, 1, 1);
+      const tmpScale = new THREE.Vector3(SCALE_FIT, SCALE_FIT, SCALE_FIT);
       const statusHint = document.getElementById("status-hint");
       const shapeNameEl = document.getElementById("current-shape-name");
       const videoElement = document.getElementById("webcam-feed");
@@ -347,7 +356,14 @@
       });
 
       const particles = new THREE.Points(geometry, material);
+      particles.scale.setScalar(SCALE_FIT);
       scene.add(particles);
+
+      function scaleValueForMode(mode) {
+        if (mode === "small") return SCALE_SMALL;
+        if (mode === "big") return SCALE_BIG;
+        return SCALE_FIT;
+      }
 
       function dist2(a, b) {
         return Math.hypot(a.x - b.x, a.y - b.y);
@@ -626,7 +642,8 @@
           snapMinDist = 1;
           prevThumbMiddle = 1;
           hasPrevPalm = false;
-          scaleTarget = 1.0;
+          scalePending = null;
+          scaleHoldMs = 0;
           statusHint.textContent = "Đưa tay vào khung webcam";
           videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
           videoElement.style.boxShadow = "none";
@@ -737,22 +754,59 @@
         isFrozen =
           indexUp && !middleUp && !ringUp && !pinkyUp && !isPinching;
 
-        // 4) Fist / open for scale
+        // 4) Fist / open
         isFist = fingersDown >= 4 && thumbIndex > 0.06;
         isOpenPalm = fingersUp >= 4 && thumbIndex > 0.08;
         canRotate = isOpenPalm && !isPinching && !exploding;
 
-        if (!isFrozen && !isPinching) {
-          if (isFist) scaleTarget = 0.35;
-          else if (isOpenPalm) scaleTarget = 2.05;
-          else scaleTarget = 1.0;
+        // Scale sticky + delay:
+        // - Nắm GIỮ yên → thu nhỏ (giữ mức này khi mở tay để xoay)
+        // - Xòe GIỮ YÊN (không di chuyển) → phóng to
+        // - Xòe + di chuyển → chỉ xoay, KHÔNG đổi size
+        // - 2 ngón giữ yên → về cỡ vừa khung
+        if (!isFrozen && !isPinching && !exploding) {
+          let want = null;
+          if (isFist && handSpeed < 0.022) want = "small";
+          else if (isOpenPalm && handSpeed < 0.012) want = "big";
+          else if (
+            fingersUp === 2 &&
+            indexUp &&
+            middleUp &&
+            !ringUp &&
+            !pinkyUp &&
+            handSpeed < 0.02
+          ) {
+            want = "fit";
+          }
+
+          if (want && want !== scaleMode) {
+            if (scalePending !== want) {
+              scalePending = want;
+              scaleHoldMs = 0;
+            }
+            scaleHoldMs += dt * 1000;
+            if (scaleHoldMs >= SCALE_HOLD_MS) {
+              scaleMode = want;
+              scalePending = null;
+              scaleHoldMs = 0;
+            }
+          } else {
+            // Đang xoay (xòe + move) hoặc cử chỉ khác → hủy pending phóng to/thu nhỏ
+            if (isOpenPalm && handSpeed >= 0.012 && scalePending === "big") {
+              scalePending = null;
+              scaleHoldMs = 0;
+            } else if (!want) {
+              scalePending = null;
+              scaleHoldMs = 0;
+            }
+          }
         }
+        scaleTarget = scaleValueForMode(scaleMode);
 
         // 360° rotation: accumulate deltas while open palm moves
         if (canRotate && hasPrevPalm) {
           rotY += (palmX - prevPalmX) * 3.2;
           rotX += (palmY - prevPalmY) * 2.6;
-          // soft clamp pitch so it doesn't flip awkwardly
           rotX = THREE.MathUtils.clamp(rotX, -Math.PI * 0.85, Math.PI * 0.85);
         }
 
@@ -778,16 +832,31 @@
           statusHint.textContent = "Giữ… rồi búng mạnh để vỡ tung";
           videoElement.style.borderColor = "var(--snap)";
           videoElement.style.boxShadow = "0 0 18px rgba(251, 191, 36, 0.4)";
+        } else if (scalePending === "small") {
+          statusHint.textContent = "Giữ nắm tay để thu nhỏ…";
+          videoElement.style.borderColor = "var(--shrink)";
+          videoElement.style.boxShadow = "0 0 18px rgba(74, 222, 128, 0.35)";
+        } else if (scalePending === "big") {
+          statusHint.textContent = "Giữ xòe yên để phóng to…";
+          videoElement.style.borderColor = "var(--accent)";
+          videoElement.style.boxShadow = "0 0 18px rgba(0, 242, 255, 0.35)";
+        } else if (scalePending === "fit") {
+          statusHint.textContent = "Giữ 2 ngón để về cỡ vừa…";
+          videoElement.style.borderColor = "rgba(255, 255, 255, 0.7)";
+          videoElement.style.boxShadow = "none";
         } else if (isFist) {
-          statusHint.textContent = "Thu nhỏ";
+          statusHint.textContent =
+            scaleMode === "small" ? "Đã thu nhỏ · xòe tay để xoay" : "Nắm tay";
           videoElement.style.borderColor = "var(--shrink)";
           videoElement.style.boxShadow = "0 0 22px rgba(74, 222, 128, 0.45)";
         } else if (isOpenPalm) {
-          statusHint.textContent = "Phóng to · di chuyển để xoay 360°";
+          statusHint.textContent =
+            "Di chuyển để xoay 360° · giữ yên để phóng to";
           videoElement.style.borderColor = "var(--accent)";
           videoElement.style.boxShadow = "0 0 26px rgba(0, 242, 255, 0.55)";
         } else {
-          statusHint.textContent = "Xòe tay để xoay · nắm để thu nhỏ";
+          statusHint.textContent =
+            "Cỡ vừa khung · xòe xoay · nắm giữ thu nhỏ";
           videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
           videoElement.style.boxShadow = "none";
         }
@@ -813,7 +882,7 @@
         const posAttr = particles.geometry.attributes.position;
 
         tmpScale.set(scaleTarget, scaleTarget, scaleTarget);
-        particles.scale.lerp(tmpScale, 0.18);
+        particles.scale.lerp(tmpScale, 0.08);
 
         // Smooth follow accumulated 360° rotation
         particles.rotation.y += (rotY - particles.rotation.y) * 0.18;
