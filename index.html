@@ -226,7 +226,7 @@
 
     <script>
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const PARTICLE_COUNT = isMobile ? 3500 : 5500;
+      const PARTICLE_COUNT = isMobile ? 1400 : 2200;
 
       let currentShape = "saturn";
       const shapeList = [
@@ -375,7 +375,7 @@
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
-        size: isMobile ? 0.2 : 0.16,
+        size: isMobile ? 0.26 : 0.22,
         vertexColors: true,
         transparent: true,
         opacity: 0.9,
