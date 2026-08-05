@@ -185,7 +185,7 @@
         ✊ <b>NẮM TAY</b> → <span style="opacity: 0.6">THU NHỎ</span><br />
         🖐️ <b>XÒE TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
         🤏 <b>CHỤM (3 NGÓN CO)</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
-        🫰 <b>BÚNG TAY</b> → <span style="opacity: 0.6">VỠ TUNG</span><br />
+        🫰 <b>GIỮ CÁI+GIỮA RỒI BÚNG</b> → <span style="opacity: 0.6">VỠ TUNG</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -260,6 +260,9 @@
       let canRotate = false;
 
       let snapArmed = false;
+      let snapArmStart = 0;
+      let snapMinDist = 1;
+      let prevThumbMiddle = 1;
       let lastSnapTime = 0;
       let exploding = false;
       let explodeUntil = 0;
@@ -563,8 +566,11 @@
 
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastSnapTime < 1500) return;
+        if (now - lastSnapTime < 2500) return;
         lastSnapTime = now;
+        snapArmed = false;
+        snapArmStart = 0;
+        snapMinDist = 1;
         exploding = true;
         explodeUntil = now + 2200;
         const pos = particles.geometry.attributes.position.array;
@@ -616,6 +622,9 @@
           isOpenPalm = false;
           canRotate = false;
           snapArmed = false;
+          snapArmStart = 0;
+          snapMinDist = 1;
+          prevThumbMiddle = 1;
           hasPrevPalm = false;
           scaleTarget = 1.0;
           statusHint.textContent = "Đưa tay vào khung webcam";
@@ -648,14 +657,59 @@
           : 0;
 
         // --- Gesture priority (exclusive) ---
-        // 1) Snap: thumb+middle close then flick open
-        const snapClose = thumbMiddle < 0.055 && !indexUp;
-        if (snapClose) {
-          snapArmed = true;
-        } else if (snapArmed && thumbMiddle > 0.16) {
-          snapArmed = false;
-          triggerExplode();
+        // 1) Snap (chặt): phải CHỤM ngón cái+giữa và GIỮ, tay đứng yên,
+        //    rồi BẬT ra nhanh — không kích hoạt khi đang xoay/di chuyển
+        // Không arm khi đang xòe tay xoay (fingersUp >= 4)
+        const snapPoseReady =
+          thumbMiddle < 0.03 &&
+          !ringUp &&
+          !pinkyUp &&
+          fingersUp <= 2 &&
+          fingersDown >= 2 &&
+          handSpeed < 0.015 &&
+          thumbIndex > 0.045; // tách khỏi chụm đổi hình (cái+trỏ)
+
+        const nowMs = Date.now();
+        const midOpenVel = thumbMiddle - prevThumbMiddle;
+
+        if (snapPoseReady) {
+          if (!snapArmed) {
+            snapArmed = true;
+            snapArmStart = nowMs;
+            snapMinDist = thumbMiddle;
+          } else {
+            snapMinDist = Math.min(snapMinDist, thumbMiddle);
+          }
+        } else if (snapArmed) {
+          const heldMs = nowMs - snapArmStart;
+          const heldLongEnough = heldMs >= 280 && heldMs <= 1000;
+          const wasVeryClose = snapMinDist < 0.028;
+          // Búng thật: khoảng cách cái–giữa tăng đột ngột
+          const flickedOpen =
+            midOpenVel > 0.07 &&
+            thumbMiddle > 0.14 &&
+            thumbMiddle > snapMinDist + 0.11;
+
+          if (
+            heldLongEnough &&
+            wasVeryClose &&
+            flickedOpen &&
+            handSpeed < 0.03
+          ) {
+            triggerExplode();
+          } else if (
+            midOpenVel < 0.035 && thumbMiddle > 0.07 ||
+            heldMs > 1000 ||
+            handSpeed > 0.04 ||
+            fingersUp >= 3
+          ) {
+            // Tách chậm / tay vẫy / xòe tay → hủy, không phải búng
+            snapArmed = false;
+            snapArmStart = 0;
+            snapMinDist = 1;
+          }
         }
+        prevThumbMiddle = thumbMiddle;
 
         // 2) Morph pinch: thumb+index touch + 3 other fingers curled + hand nearly still
         //    (tránh nhầm khi xòe tay di chuyển)
@@ -720,8 +774,8 @@
             pinchHoldMs > 0 ? "Giữ chụm để đổi hình…" : "Đổi hình";
           videoElement.style.borderColor = "var(--morph)";
           videoElement.style.boxShadow = "none";
-        } else if (snapArmed) {
-          statusHint.textContent = "Búng tay để vỡ tung";
+        } else if (snapArmed && Date.now() - snapArmStart > 180) {
+          statusHint.textContent = "Giữ… rồi búng mạnh để vỡ tung";
           videoElement.style.borderColor = "var(--snap)";
           videoElement.style.boxShadow = "0 0 18px rgba(251, 191, 36, 0.4)";
         } else if (isFist) {
