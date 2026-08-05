@@ -26,6 +26,7 @@
         --accent: #00f2ff;
         --freeze: #ff4d4d;
         --morph: #a855f7;
+        --snap: #fbbf24;
       }
 
       body {
@@ -148,6 +149,21 @@
         width: 80%;
       }
 
+      #status-hint {
+        position: absolute;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        z-index: 10;
+        font-size: clamp(0.52rem, 2vw, 0.68rem);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.7);
+        pointer-events: none;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
+        white-space: nowrap;
+      }
+
 
       @media (max-width: 768px) {
         #info {
@@ -255,8 +271,9 @@
       <h1>Dòng Hạt Đồng Bộ</h1>
       <p>
         👋 DI CHUYỂN → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
-        🤏 <b>CHỤM</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
+        🤏 <b>CHỤM CÁI+TRỎ</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
         ✊ <b>NẮM TAY</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
+        ✊ <b>CHỤM HẾT · TÍCH · XÒE</b> → <span style="opacity: 0.6">NỔ</span><br />
         ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
       </p>
     </div>
@@ -265,9 +282,10 @@
       <div id="shape-label">Hình hiện tại</div>
       <div id="current-shape-name">Quả cầu</div>
     </div>
-    
+
+    <div id="status-hint">Đưa tay vào khung webcam</div>
     <div id="loading">Đang khởi tạo…</div>
-    <video id="webcam-feed" autoplay playsinline></video>
+    <video id="webcam-feed" autoplay playsinline muted></video>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -283,12 +301,26 @@
     <script>
     
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const PARTICLE_COUNT = isMobile ? 10000 : 20000;
+      const PARTICLE_COUNT = isMobile ? 6000 : 12000;
 
       let currentShape = "sphere";
-      const shapeList = ["sphere", "heart", "saturn", "flower", "fireworks"];
+      const shapeList = [
+        "sphere",
+        "cube",
+        "pyramid",
+        "octahedron",
+        "icosahedron",
+        "heart",
+        "saturn",
+        "flower",
+        "fireworks",
+      ];
       const shapeNamesVi = {
         sphere: "Quả cầu",
+        cube: "Lập phương",
+        pyramid: "Kim tự tháp",
+        octahedron: "Bát diện",
+        icosahedron: "Đa giác 3D",
         heart: "Trái tim",
         saturn: "Sao Thổ",
         flower: "Bông hoa",
@@ -297,13 +329,27 @@
       let shapeIndex = 0;
 
       let targetPositions = [];
+      let explodeVel = new Float32Array(PARTICLE_COUNT * 3);
       let handX = 0,
         handY = 0;
       let isPinching = false;
       let isFist = false;
       let isFrozen = false;
-
       let lastPinchTime = 0;
+
+      // Chụm hết ngón → tích → xòe = nổ
+      let explodeChargeMs = 0;
+      let explodeReady = false;
+      let exploding = false;
+      let explodeUntil = 0;
+      let lastExplodeTime = 0;
+      const EXPLODE_CHARGE_MS = 700;
+      let lastFrameTime = performance.now();
+
+      // Scale vừa khung hình (đặc biệt điện thoại)
+      let fitScale = 1;
+      let expandScale = 1.65;
+      const statusHint = document.getElementById("status-hint");
 
       // --- Scene Setup ---
       const scene = new THREE.Scene();
@@ -316,15 +362,31 @@
       camera.position.z = 10;
 
       const renderer = new THREE.WebGLRenderer({
-        antialias: !isMobile, // Disable antialias on mobile for performance
+        antialias: !isMobile,
         alpha: true,
         powerPreference: "high-performance",
       });
       renderer.setPixelRatio(
-        Math.min(window.devicePixelRatio, isMobile ? 1 : 2)
+        Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2)
       );
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
+
+      function updateViewportFit() {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        camera.aspect = w / h;
+        camera.fov = h > w ? (isMobile ? 68 : 62) : isMobile ? 56 : 55;
+        camera.updateProjectionMatrix();
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const visibleH = 2 * Math.tan(vFOV / 2) * camera.position.z;
+        const visibleW = visibleH * camera.aspect;
+        const minSide = Math.min(visibleW, visibleH);
+        // hình gốc ~ bán kính 4 → đường kính 8
+        fitScale = (minSide * 0.82) / 8;
+        expandScale = Math.min(fitScale * 1.7, (minSide * 0.95) / 8);
+      }
+      updateViewportFit();
 
       function createHardCircleTexture() {
         const canvas = document.createElement("canvas");
@@ -367,7 +429,109 @@
       });
 
       const particles = new THREE.Points(geometry, material);
+      particles.scale.setScalar(fitScale);
       scene.add(particles);
+
+      // --- Polyhedra helpers (mặt + cạnh → thấy rõ chiều sâu 3D khi xoay) ---
+      function buildEdgesFromFaces(faces) {
+        const key = (a, b) => {
+          const s = (p) =>
+            p[0].toFixed(4) + "," + p[1].toFixed(4) + "," + p[2].toFixed(4);
+          const ka = s(a);
+          const kb = s(b);
+          return ka < kb ? ka + "|" + kb : kb + "|" + ka;
+        };
+        const map = new Map();
+        for (const f of faces) {
+          for (let i = 0; i < 3; i++) {
+            const a = f[i];
+            const b = f[(i + 1) % 3];
+            map.set(key(a, b), [a, b]);
+          }
+        }
+        return [...map.values()];
+      }
+
+      function samplePolyhedron(faces, edges, scale) {
+        if (Math.random() < 0.32 && edges.length) {
+          const e = edges[(Math.random() * edges.length) | 0];
+          const t = Math.random();
+          return [
+            (e[0][0] + (e[1][0] - e[0][0]) * t) * scale,
+            (e[0][1] + (e[1][1] - e[0][1]) * t) * scale,
+            (e[0][2] + (e[1][2] - e[0][2]) * t) * scale,
+          ];
+        }
+        const f = faces[(Math.random() * faces.length) | 0];
+        let u = Math.random();
+        let v = Math.random();
+        if (u + v > 1) {
+          u = 1 - u;
+          v = 1 - v;
+        }
+        const w = 1 - u - v;
+        return [
+          (f[0][0] * w + f[1][0] * u + f[2][0] * v) * scale,
+          (f[0][1] * w + f[1][1] * u + f[2][1] * v) * scale,
+          (f[0][2] * w + f[1][2] * u + f[2][2] * v) * scale,
+        ];
+      }
+
+      const CUBE_V = [
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
+      ];
+      const CUBE_FACES = [
+        [CUBE_V[0], CUBE_V[1], CUBE_V[2]], [CUBE_V[0], CUBE_V[2], CUBE_V[3]],
+        [CUBE_V[4], CUBE_V[6], CUBE_V[5]], [CUBE_V[4], CUBE_V[7], CUBE_V[6]],
+        [CUBE_V[0], CUBE_V[4], CUBE_V[5]], [CUBE_V[0], CUBE_V[5], CUBE_V[1]],
+        [CUBE_V[2], CUBE_V[6], CUBE_V[7]], [CUBE_V[2], CUBE_V[7], CUBE_V[3]],
+        [CUBE_V[0], CUBE_V[3], CUBE_V[7]], [CUBE_V[0], CUBE_V[7], CUBE_V[4]],
+        [CUBE_V[1], CUBE_V[5], CUBE_V[6]], [CUBE_V[1], CUBE_V[6], CUBE_V[2]],
+      ];
+      const CUBE_EDGES = buildEdgesFromFaces(CUBE_FACES);
+
+      const OCT_V = [
+        [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+      ];
+      const OCT_FACES = [
+        [OCT_V[0], OCT_V[2], OCT_V[4]], [OCT_V[2], OCT_V[1], OCT_V[4]],
+        [OCT_V[1], OCT_V[3], OCT_V[4]], [OCT_V[3], OCT_V[0], OCT_V[4]],
+        [OCT_V[0], OCT_V[5], OCT_V[2]], [OCT_V[2], OCT_V[5], OCT_V[1]],
+        [OCT_V[1], OCT_V[5], OCT_V[3]], [OCT_V[3], OCT_V[5], OCT_V[0]],
+      ];
+      const OCT_EDGES = buildEdgesFromFaces(OCT_FACES);
+
+      const PHI = (1 + Math.sqrt(5)) / 2;
+      const ICO_RAW = [
+        [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
+        [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
+        [PHI, 0, 1], [-PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, -1],
+      ].map((p) => {
+        const len = Math.hypot(p[0], p[1], p[2]);
+        return [p[0] / len, p[1] / len, p[2] / len];
+      });
+      const ICO_FACES = [
+        [0, 1, 8], [0, 8, 4], [0, 4, 5], [0, 5, 9], [0, 9, 1],
+        [1, 6, 8], [8, 6, 10], [8, 10, 4], [4, 10, 2], [4, 2, 5],
+        [5, 2, 11], [5, 11, 9], [9, 11, 7], [9, 7, 1], [1, 7, 6],
+        [3, 10, 6], [3, 2, 10], [3, 11, 2], [3, 7, 11], [3, 6, 7],
+      ].map((idx) => idx.map((i) => ICO_RAW[i]));
+      const ICO_EDGES = buildEdgesFromFaces(ICO_FACES);
+
+      const PYR_APEX = [0, 1.35, 0];
+      const PYR_BASE = [
+        [-1, -1.1, -1], [1, -1.1, -1], [1, -1.1, 1], [-1, -1.1, 1],
+      ];
+      const PYR_FACES = [
+        [PYR_APEX, PYR_BASE[0], PYR_BASE[1]],
+        [PYR_APEX, PYR_BASE[1], PYR_BASE[2]],
+        [PYR_APEX, PYR_BASE[2], PYR_BASE[3]],
+        [PYR_APEX, PYR_BASE[3], PYR_BASE[0]],
+        [PYR_BASE[0], PYR_BASE[2], PYR_BASE[1]],
+        [PYR_BASE[0], PYR_BASE[3], PYR_BASE[2]],
+      ];
+      const PYR_EDGES = buildEdgesFromFaces(PYR_FACES);
 
       // --- Shapes Math ---
       const shapes = {
@@ -380,6 +544,10 @@
             4 * Math.cos(phi),
           ];
         },
+        cube: () => samplePolyhedron(CUBE_FACES, CUBE_EDGES, 2.55),
+        pyramid: () => samplePolyhedron(PYR_FACES, PYR_EDGES, 2.7),
+        octahedron: () => samplePolyhedron(OCT_FACES, OCT_EDGES, 3.3),
+        icosahedron: () => samplePolyhedron(ICO_FACES, ICO_EDGES, 3.4),
         heart: (i) => {
           const phi = Math.random() * Math.PI * 2;
           const x = 16 * Math.pow(Math.sin(phi), 3);
@@ -388,7 +556,8 @@
             5 * Math.cos(2 * phi) -
             2 * Math.cos(3 * phi) -
             Math.cos(4 * phi);
-          return [x * 0.25, y * 0.25, (Math.random() - 0.5) * 2];
+          const fill = Math.pow(Math.random(), 0.35);
+          return [x * 0.25 * fill, y * 0.25 * fill, (Math.random() - 0.5) * 1.6 * fill];
         },
         saturn: (i) => {
           if (i < PARTICLE_COUNT * 0.6) {
@@ -447,6 +616,7 @@
       function cycleShape() {
         const now = Date.now();
         if (now - lastPinchTime < 4000) return;
+        if (exploding || explodeChargeMs > 100) return;
 
         shapeIndex = (shapeIndex + 1) % shapeList.length;
         currentShape = shapeList[shapeIndex];
@@ -458,6 +628,46 @@
         lastPinchTime = now;
       }
 
+      function tipClusterSpread(lm) {
+        const tips = [lm[4], lm[8], lm[12], lm[16], lm[20]];
+        let cx = 0,
+          cy = 0;
+        for (const t of tips) {
+          cx += t.x;
+          cy += t.y;
+        }
+        cx /= 5;
+        cy /= 5;
+        let s = 0;
+        for (const t of tips) s += Math.hypot(t.x - cx, t.y - cy);
+        return s / 5;
+      }
+
+      function triggerExplode() {
+        const now = Date.now();
+        if (now - lastExplodeTime < 1800) return;
+        lastExplodeTime = now;
+        explodeChargeMs = 0;
+        explodeReady = false;
+        exploding = true;
+        explodeUntil = now + 2000;
+        const pos = particles.geometry.attributes.position.array;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const ix = i * 3;
+          const x = pos[ix];
+          const y = pos[ix + 1];
+          const z = pos[ix + 2];
+          const len = Math.hypot(x, y, z) || 1;
+          const power = 0.16 + Math.random() * 0.32;
+          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.07;
+          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.07;
+          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.07;
+        }
+        statusHint.textContent = "Bùng nổ!";
+        videoElement.style.borderColor = "var(--snap)";
+        videoElement.style.boxShadow = "0 0 28px rgba(251, 191, 36, 0.6)";
+      }
+
       // --- Hand Tracking ---
       const videoElement = document.getElementById("webcam-feed");
       const hands = new Hands({
@@ -467,45 +677,111 @@
 
       hands.setOptions({
         maxNumHands: 1,
-        modelComplexity: isMobile ? 0 : 1, // Lower complexity on mobile
+        modelComplexity: isMobile ? 0 : 1,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6,
       });
 
       hands.onResults((results) => {
         document.getElementById("loading").style.display = "none";
+        const now = performance.now();
+        const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
+        lastFrameTime = now;
+
         if (
-          results.multiHandLandmarks &&
-          results.multiHandLandmarks.length > 0
+          !results.multiHandLandmarks ||
+          results.multiHandLandmarks.length === 0
         ) {
-          const lm = results.multiHandLandmarks[0];
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
+          explodeReady = false;
+          statusHint.textContent = "Đưa tay vào khung webcam";
+          return;
+        }
 
-          handX = (1 - lm[8].x) * 2 - 1;
-          handY = (1 - lm[8].y) * 2 - 1;
+        const lm = results.multiHandLandmarks[0];
 
-          const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
-          isPinching = pinchDist < 0.05;
-          if (isPinching) cycleShape();
+        handX = (1 - lm[8].x) * 2 - 1;
+        handY = (1 - lm[8].y) * 2 - 1;
 
-          const isIndexDown = lm[8].y > lm[6].y;
-          const isMiddleDown = lm[12].y > lm[10].y;
-          const isRingDown = lm[16].y > lm[14].y;
-          const isPinkyDown = lm[20].y > lm[18].y;
+        const isIndexDown = lm[8].y > lm[6].y;
+        const isMiddleDown = lm[12].y > lm[10].y;
+        const isRingDown = lm[16].y > lm[14].y;
+        const isPinkyDown = lm[20].y > lm[18].y;
+        const fingersUp =
+          (!isIndexDown ? 1 : 0) +
+          (!isMiddleDown ? 1 : 0) +
+          (!isRingDown ? 1 : 0) +
+          (!isPinkyDown ? 1 : 0);
 
-          isFist = isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
-          isFrozen = !isIndexDown && isMiddleDown && isRingDown && isPinkyDown;
+        const pinchDist = Math.hypot(lm[8].x - lm[4].x, lm[8].y - lm[4].y);
+        const cluster = tipClusterSpread(lm);
+        const allBunched = cluster < 0.05 && isIndexDown && isMiddleDown && isRingDown;
+        const isOpenPalm = fingersUp >= 4 && pinchDist > 0.08 && cluster > 0.09;
 
-          if (isFrozen) {
-            videoElement.style.borderColor = "var(--freeze)";
-          } else if (isPinching) {
-            videoElement.style.borderColor = "var(--morph)";
-          } else if (isFist) {
-            videoElement.style.borderColor = "var(--accent)";
-            videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
-          } else {
-            videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
-            videoElement.style.boxShadow = "none";
+        // 1) Nổ: chụm hết đầu ngón → tích → xòe
+        if (!exploding && allBunched) {
+          explodeChargeMs += dt * 1000;
+          if (explodeChargeMs >= EXPLODE_CHARGE_MS) {
+            explodeReady = true;
+            explodeChargeMs = EXPLODE_CHARGE_MS;
           }
+        } else if (explodeReady && isOpenPalm) {
+          triggerExplode();
+        } else if (!allBunched) {
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 450);
+          if (explodeChargeMs < EXPLODE_CHARGE_MS * 0.55) explodeReady = false;
+        }
+
+        // 2) Đổi hình: chụm cái+trỏ (không phải chụm cả bàn)
+        isPinching =
+          pinchDist < 0.045 &&
+          cluster > 0.055 &&
+          !allBunched &&
+          explodeChargeMs < 80;
+        if (isPinching) cycleShape();
+
+        isFist =
+          isIndexDown &&
+          isMiddleDown &&
+          isRingDown &&
+          isPinkyDown &&
+          !allBunched &&
+          cluster > 0.055;
+        isFrozen =
+          !isIndexDown &&
+          isMiddleDown &&
+          isRingDown &&
+          isPinkyDown &&
+          !isPinching &&
+          explodeChargeMs < 80;
+
+        if (exploding) {
+          statusHint.textContent = "Vỡ tung…";
+          videoElement.style.borderColor = "var(--snap)";
+          videoElement.style.boxShadow = "0 0 28px rgba(251, 191, 36, 0.6)";
+        } else if (explodeChargeMs > 40 || explodeReady) {
+          const pct = Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100);
+          statusHint.textContent = explodeReady
+            ? "Đã tích đầy · XÒE TAY để nổ!"
+            : "Đang tích năng lượng " + pct + "%…";
+          videoElement.style.borderColor = "var(--snap)";
+          videoElement.style.boxShadow = "0 0 22px rgba(251, 191, 36, 0.5)";
+        } else if (isFrozen) {
+          statusHint.textContent = "Đóng băng";
+          videoElement.style.borderColor = "var(--freeze)";
+          videoElement.style.boxShadow = "none";
+        } else if (isPinching) {
+          statusHint.textContent = "Đổi hình…";
+          videoElement.style.borderColor = "var(--morph)";
+          videoElement.style.boxShadow = "none";
+        } else if (isFist) {
+          statusHint.textContent = "Phóng to";
+          videoElement.style.borderColor = "var(--accent)";
+          videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
+        } else {
+          statusHint.textContent = "Xoay để thấy chiều sâu 3D · đa giác rõ mặt";
+          videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
+          videoElement.style.boxShadow = "none";
         }
       });
 
@@ -521,19 +797,38 @@
       // --- Animation Loop ---
       const clock = new THREE.Clock();
       const colorObj = new THREE.Color();
+      const tmpScale = new THREE.Vector3();
 
       function animate() {
         requestAnimationFrame(animate);
         const time = clock.getElapsedTime();
+        const now = Date.now();
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
 
-        if (!isFrozen) {
+        const s = isFist ? expandScale : fitScale;
+        tmpScale.set(s, s, s);
+        particles.scale.lerp(tmpScale, 0.12);
+
+        if (exploding) {
+          for (let i = 0; i < PARTICLE_COUNT; i++) {
+            const ix = i * 3;
+            posAttr.array[ix] += explodeVel[ix];
+            posAttr.array[ix + 1] += explodeVel[ix + 1];
+            posAttr.array[ix + 2] += explodeVel[ix + 2];
+            explodeVel[ix] *= 0.985;
+            explodeVel[ix + 1] *= 0.985;
+            explodeVel[ix + 2] *= 0.985;
+            explodeVel[ix + 1] -= 0.0025;
+          }
+          posAttr.needsUpdate = true;
+          if (now > explodeUntil) {
+            exploding = false;
+            statusHint.textContent = "Đang họp lại…";
+          }
+        } else if (!isFrozen) {
           particles.rotation.y += 0.003 + handX * 0.04;
           particles.rotation.x += handY * 0.02;
-
-          const s = isFist ? 2.2 : 1.0;
-          particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
@@ -567,9 +862,15 @@
       }
 
       window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        updateViewportFit();
+      });
+
+      window.addEventListener("orientationchange", () => {
+        setTimeout(() => {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          updateViewportFit();
+        }, 120);
       });
 
    

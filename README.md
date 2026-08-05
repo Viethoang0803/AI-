@@ -15,13 +15,14 @@
 | Cử chỉ | Hành động |
 |--------|-----------|
 | Di chuyển tay | Xoay & đổi màu |
-| Chụm ngón | Đổi hình (~4 giây/lần) |
-| Nắm tay | Phóng to |
+| Chụm ngón cái + trỏ | Đổi hình (~4 giây/lần) |
+| Nắm tay | Phóng to (vừa khung) |
+| Chụm hết ngón · tích · xòe | Nổ / vỡ tung |
 | Giơ 1 ngón | Đóng băng |
 
 ## Các hình
 
-Quả cầu · Trái tim · Sao Thổ · Bông hoa · Pháo hoa
+Quả cầu · Lập phương · Kim tự tháp · Bát diện · Đa giác 3D · Trái tim · Sao Thổ · Bông hoa · Pháo hoa
 
 ## Chạy local
 
