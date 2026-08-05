@@ -16,8 +16,9 @@
 |--------|-----------|
 | 1 tay | Quả cầu theo lòng bàn tay (mượt) |
 | 2 tay | Khoảng cách 2 tay → phóng to / thu nhỏ |
-| Chụm cái + trỏ | Đổi hình |
-| Bó hết vào cái · tích · mở | Nổ |
+| Chụm cái + trỏ (giữ) | Tích năng lượng |
+| Xòe / mở tay (sau khi tích) | Nổ |
+| Giơ 2 ngón giữ | Đổi hình |
 
 ## Hình
 

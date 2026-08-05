@@ -239,8 +239,8 @@
     <div id="hints">
       1 tay → quả cầu nằm trên lòng bàn tay<br />
       2 tay → kéo xa để mở rộng<br />
-      Chụm cái+trỏ → đổi hình<br />
-      Bó hết vào cái · tích · mở → nổ
+      ✌️ 2 ngón giữ → đổi hình<br />
+      Chụm cái+trỏ giữ → tích · xòe tay → nổ
     </div>
 
     <div id="loading">
@@ -296,13 +296,14 @@
       let handRotY = 0;
 
       let wasPinching = false;
+      let peaceHoldMs = 0;
       let lastMorphTime = 0;
       let explodeChargeMs = 0;
       let explodeReady = false;
       let exploding = false;
       let explodeUntil = 0;
       let lastExplodeTime = 0;
-      const EXPLODE_CHARGE_MS = 550;
+      const EXPLODE_CHARGE_MS = 450;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
@@ -671,7 +672,7 @@
           );
         }
 
-        // Xoay nhẹ theo tay (cảm giác Hand-Sync)
+        // Xoay nhẹ theo tay
         handRotY = (1 - primary[8].x) * 2 - 1;
         handRotX = (1 - primary[8].y) * 2 - 1;
 
@@ -679,35 +680,46 @@
           primary[4].x - primary[8].x,
           primary[4].y - primary[8].y
         );
-        const avgTips = tipThumbAvg(primary);
-        const isPinching = pinchDist < 0.05 && avgTips > 0.07 && handCount === 1;
-        if (isPinching && !wasPinching) cycleShape();
-        wasPinching = isPinching;
+        // Chụm cái + trỏ (ngưỡng rộng để dễ kích hoạt)
+        const isPinching = pinchDist < 0.07;
 
-        // Nổ: bó hết đầu ngón vào cái → tích → mở
-        const explodePose =
-          handCount === 1 &&
-          avgTips < 0.065 &&
-          [8, 12, 16, 20].every(
-            (i) =>
-              Math.hypot(primary[4].x - primary[i].x, primary[4].y - primary[i].y) <
-              0.09
-          );
-        const released =
-          avgTips > 0.12 && fingerCount >= 2;
+        const indexUp = primary[8].y < primary[6].y;
+        const middleUp = primary[12].y < primary[10].y;
+        const ringUp = primary[16].y < primary[14].y;
+        const pinkyUp = primary[20].y < primary[18].y;
+        const isOpenPalm =
+          indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.1;
+        const isPeace =
+          indexUp && middleUp && !ringUp && !pinkyUp && !isPinching;
 
-        if (!exploding && explodePose) {
+        // Đổi hình: giơ 2 ngón (peace) giữ ~0.45s
+        if (isPeace && handCount === 1) {
+          peaceHoldMs += dt * 1000;
+          if (peaceHoldMs > 450) {
+            cycleShape();
+            peaceHoldMs = -600;
+          }
+        } else {
+          peaceHoldMs = Math.max(0, peaceHoldMs - dt * 500);
+        }
+
+        // Nổ: CHỤM cái+trỏ để TÍCH → XÒE TAY để NỔ
+        if (!exploding && isPinching) {
           explodeChargeMs += dt * 1000;
           if (explodeChargeMs >= EXPLODE_CHARGE_MS) {
             explodeReady = true;
             explodeChargeMs = EXPLODE_CHARGE_MS;
           }
-        } else if (explodeReady && released) {
+        } else if (explodeReady && (isOpenPalm || (!isPinching && pinchDist > 0.12))) {
+          // Nhả chụm / xòe tay → nổ
           triggerExplode();
-        } else if (!explodePose) {
-          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 350);
-          if (explodeChargeMs < EXPLODE_CHARGE_MS * 0.4) explodeReady = false;
+        } else if (!isPinching && !explodeReady) {
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
+        } else if (!isPinching && explodeReady && pinchDist < 0.12 && !isOpenPalm) {
+          // Giữ sẵn sàng nếu chưa xòe hẳn
         }
+
+        wasPinching = isPinching;
 
         updateStats();
       });
