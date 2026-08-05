@@ -231,6 +231,9 @@
       let currentShape = "sphere";
       const shapeList = [
         "sphere",
+        "cube",
+        "octahedron",
+        "icosahedron",
         "heart",
         "star",
         "cat",
@@ -242,10 +245,13 @@
       ];
       const shapeNamesVi = {
         sphere: "Quả cầu",
+        cube: "Khối lập phương",
+        octahedron: "Bát diện",
+        icosahedron: "Khối tinh thể",
         heart: "Trái tim",
         star: "Ngôi sao",
         cat: "Con mèo",
-        bunny: "Thỏ con",
+        bunny: "Con thỏ",
         moon: "Mặt trăng",
         flower: "Bông hoa",
         saturn: "Sao Thổ",
@@ -300,10 +306,13 @@
 
       const shapeHue = {
         sphere: 0.55,
+        cube: 0.48,
+        octahedron: 0.72,
+        icosahedron: 0.18,
         heart: 0.95,
         star: 0.14,
         cat: 0.08,
-        bunny: 0.9,
+        bunny: 0.92,
         moon: 0.6,
         flower: 0.82,
         saturn: 0.12,
@@ -410,6 +419,108 @@
         return [cx + Math.cos(a) * rad, cy + Math.sin(a) * rad, (Math.random() - 0.5) * 0.8];
       }
 
+      function inEllipse(cx, cy, rx, ry, rz) {
+        const a = Math.random() * Math.PI * 2;
+        const rad = Math.sqrt(Math.random());
+        return [
+          cx + Math.cos(a) * rad * rx,
+          cy + Math.sin(a) * rad * ry,
+          (Math.random() - 0.5) * rz,
+        ];
+      }
+
+      // Sample polyhedron: mặt (facet) + cạnh để xoay thấy rõ nhiều khía cạnh 3D
+      function samplePolyhedron(faces, edges, scale) {
+        if (Math.random() < 0.28 && edges.length) {
+          const e = edges[(Math.random() * edges.length) | 0];
+          const t = Math.random();
+          return [
+            (e[0][0] + (e[1][0] - e[0][0]) * t) * scale,
+            (e[0][1] + (e[1][1] - e[0][1]) * t) * scale,
+            (e[0][2] + (e[1][2] - e[0][2]) * t) * scale,
+          ];
+        }
+        const f = faces[(Math.random() * faces.length) | 0];
+        let u = Math.random();
+        let v = Math.random();
+        if (u + v > 1) {
+          u = 1 - u;
+          v = 1 - v;
+        }
+        const w = 1 - u - v;
+        return [
+          (f[0][0] * w + f[1][0] * u + f[2][0] * v) * scale,
+          (f[0][1] * w + f[1][1] * u + f[2][1] * v) * scale,
+          (f[0][2] * w + f[1][2] * u + f[2][2] * v) * scale,
+        ];
+      }
+
+      function buildEdgesFromFaces(faces) {
+        const key = (a, b) => {
+          const s = (p) => p[0].toFixed(4) + "," + p[1].toFixed(4) + "," + p[2].toFixed(4);
+          const ka = s(a);
+          const kb = s(b);
+          return ka < kb ? ka + "|" + kb : kb + "|" + ka;
+        };
+        const map = new Map();
+        for (const f of faces) {
+          for (let i = 0; i < 3; i++) {
+            const a = f[i];
+            const b = f[(i + 1) % 3];
+            map.set(key(a, b), [a, b]);
+          }
+        }
+        return [...map.values()];
+      }
+
+      // Cube (±1)
+      const CUBE_V = [
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1],
+      ];
+      const CUBE_FACES = [
+        [CUBE_V[0], CUBE_V[1], CUBE_V[2]], [CUBE_V[0], CUBE_V[2], CUBE_V[3]],
+        [CUBE_V[4], CUBE_V[6], CUBE_V[5]], [CUBE_V[4], CUBE_V[7], CUBE_V[6]],
+        [CUBE_V[0], CUBE_V[4], CUBE_V[5]], [CUBE_V[0], CUBE_V[5], CUBE_V[1]],
+        [CUBE_V[2], CUBE_V[6], CUBE_V[7]], [CUBE_V[2], CUBE_V[7], CUBE_V[3]],
+        [CUBE_V[0], CUBE_V[3], CUBE_V[7]], [CUBE_V[0], CUBE_V[7], CUBE_V[4]],
+        [CUBE_V[1], CUBE_V[5], CUBE_V[6]], [CUBE_V[1], CUBE_V[6], CUBE_V[2]],
+      ];
+      const CUBE_EDGES = buildEdgesFromFaces(CUBE_FACES);
+
+      // Octahedron
+      const OCT_V = [
+        [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+      ];
+      const OCT_FACES = [
+        [OCT_V[0], OCT_V[2], OCT_V[4]], [OCT_V[2], OCT_V[1], OCT_V[4]],
+        [OCT_V[1], OCT_V[3], OCT_V[4]], [OCT_V[3], OCT_V[0], OCT_V[4]],
+        [OCT_V[0], OCT_V[5], OCT_V[2]], [OCT_V[2], OCT_V[5], OCT_V[1]],
+        [OCT_V[1], OCT_V[5], OCT_V[3]], [OCT_V[3], OCT_V[5], OCT_V[0]],
+      ];
+      const OCT_EDGES = buildEdgesFromFaces(OCT_FACES);
+
+      // Icosahedron (golden ratio) — 20 mặt tam giác
+      const PHI = (1 + Math.sqrt(5)) / 2;
+      const ICO_RAW = [
+        [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
+        [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
+        [PHI, 0, 1], [-PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, -1],
+      ].map((p) => {
+        const len = Math.hypot(p[0], p[1], p[2]);
+        return [p[0] / len, p[1] / len, p[2] / len];
+      });
+      const ICO_FACES_IDX = [
+        [0, 1, 8], [0, 8, 4], [0, 4, 5], [0, 5, 9], [0, 9, 1],
+        [1, 6, 8], [8, 6, 10], [8, 10, 4], [4, 10, 2], [4, 2, 5],
+        [5, 2, 11], [5, 11, 9], [9, 11, 7], [9, 7, 1], [1, 7, 6],
+        [3, 10, 6], [3, 2, 10], [3, 11, 2], [3, 7, 11], [3, 6, 7],
+      ];
+      const ICO_FACES = ICO_FACES_IDX.map((idx) =>
+        idx.map((i) => ICO_RAW[i])
+      );
+      const ICO_EDGES = buildEdgesFromFaces(ICO_FACES);
+
       // --- Shape math ---
       const shapes = {
         sphere: (i) => {
@@ -421,6 +532,9 @@
             4 * Math.cos(phi),
           ];
         },
+        cube: () => samplePolyhedron(CUBE_FACES, CUBE_EDGES, 2.6),
+        octahedron: () => samplePolyhedron(OCT_FACES, OCT_EDGES, 3.4),
+        icosahedron: () => samplePolyhedron(ICO_FACES, ICO_EDGES, 3.5),
         heart: (i) => {
           const t = Math.random() * Math.PI * 2;
           const x = 16 * Math.pow(Math.sin(t), 3);
@@ -527,28 +641,60 @@
           }
         },
         bunny: (i) => {
+          // Full cute bunny: head, long ears, body, feet, cotton tail
           const n = PARTICLE_COUNT;
-          if (i < n * 0.5) {
-            return inCircle(0, -0.6, 2.4);
-          } else if (i < n * 0.72) {
+          const r = i / n;
+          if (r < 0.26) {
+            // round head
+            return inEllipse(0, 1.45, 1.35, 1.25, 1.2);
+          } else if (r < 0.38) {
             // left long ear
             const t = Math.random();
             return [
-              -0.9 + (Math.random() - 0.5) * 0.7,
-              0.8 + t * 3.4,
-              (Math.random() - 0.5) * 0.5,
+              -0.55 + (Math.random() - 0.5) * 0.55,
+              2.4 + t * 2.5,
+              0.15 + (Math.random() - 0.5) * 0.35,
             ];
-          } else if (i < n * 0.94) {
+          } else if (r < 0.5) {
             // right long ear
             const t = Math.random();
             return [
-              0.9 + (Math.random() - 0.5) * 0.7,
-              0.8 + t * 3.4,
-              (Math.random() - 0.5) * 0.5,
+              0.55 + (Math.random() - 0.5) * 0.55,
+              2.4 + t * 2.5,
+              0.15 + (Math.random() - 0.5) * 0.35,
             ];
+          } else if (r < 0.54) {
+            // left eye
+            return inCircle(-0.4, 1.55, 0.18);
+          } else if (r < 0.58) {
+            // right eye
+            return inCircle(0.4, 1.55, 0.18);
+          } else if (r < 0.61) {
+            // nose / blush
+            return inCircle(0, 1.2, 0.2);
+          } else if (r < 0.82) {
+            // fluffy oval body
+            return inEllipse(0, -0.55, 1.7, 1.35, 1.4);
+          } else if (r < 0.87) {
+            // left foot
+            return inEllipse(-0.85, -1.85, 0.55, 0.35, 0.5);
+          } else if (r < 0.92) {
+            // right foot
+            return inEllipse(0.85, -1.85, 0.55, 0.35, 0.5);
+          } else if (r < 0.96) {
+            // tiny front paws
+            return inEllipse(
+              (Math.random() < 0.5 ? -0.45 : 0.45),
+              -0.15,
+              0.28,
+              0.22,
+              0.4
+            );
           } else {
-            // nose
-            return inCircle(0, -0.7, 0.28);
+            // cotton-ball tail
+            return inCircle(0.15, -1.05, 0.55).map((v, idx) =>
+              idx === 2 ? v - 0.9 : v
+            );
           }
         },
         moon: (i) => {
