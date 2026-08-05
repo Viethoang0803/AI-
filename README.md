@@ -1,28 +1,27 @@
-# Dòng Hạt Đồng Bộ Tay
+# Quả Cầu Hạt — Trường Hạt Theo Tay
 
-Ứng dụng hạt 3D điều khiển bằng cử chỉ tay qua webcam (Three.js + MediaPipe Hands).
+Ứng dụng hạt 3D theo lòng bàn tay qua webcam (Three.js + MediaPipe Hands).
 
-## Dùng trên điện thoại / máy tính
+## Demo
 
 **https://viethoang0803.github.io/AI-/**
 
-1. Mở link trên Chrome hoặc Safari  
-2. Cho phép quyền **camera**  
-3. Đưa tay vào khung hình  
+1. Mở link · cho phép camera  
+2. Giơ 1 tay — quả cầu nằm trên lòng bàn tay  
+3. Giơ 2 tay · kéo xa — mở rộng trường hạt  
 
 ## Cử chỉ
 
 | Cử chỉ | Hành động |
 |--------|-----------|
-| Di chuyển tay | Xoay & đổi màu |
-| Chụm ngón cái + trỏ | Đổi hình (~4 giây/lần) |
-| Nắm tay | Phóng to (vừa khung) |
-| Chụm hết ngón · tích · xòe | Nổ / vỡ tung |
-| Giơ 1 ngón | Đóng băng |
+| 1 tay | Quả cầu theo lòng bàn tay (mượt) |
+| 2 tay | Khoảng cách 2 tay → phóng to / thu nhỏ |
+| Chụm cái + trỏ | Đổi hình |
+| Bó hết vào cái · tích · mở | Nổ |
 
-## Các hình
+## Hình
 
-Quả cầu · Lập phương · Kim tự tháp · Bát diện · Đa giác 3D · Trái tim · Sao Thổ · Bông hoa · Pháo hoa
+Quả cầu · Lập phương · Kim tự tháp · Đa giác 3D · Trái tim · Sao Thổ · Bông hoa
 
 ## Chạy local
 

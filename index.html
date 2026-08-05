@@ -10,285 +10,247 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌌</text></svg>"
     />
-    <title>Dòng Hạt Đồng Bộ Tay</title>
+    <title>Trường Hạt Theo Tay</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
-
     <style>
       :root {
-        --glass: rgba(255, 255, 255, 0.03);
-        --glass-heavy: rgba(255, 255, 255, 0.08);
-        --border: rgba(255, 255, 255, 0.15);
-        --accent: #00f2ff;
-        --freeze: #ff4d4d;
-        --morph: #a855f7;
-        --snap: #fbbf24;
+        --accent: #e879f9;
+        --cyan: #22d3ee;
+        --panel: rgba(0, 0, 0, 0.55);
+        --line: rgba(255, 255, 255, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
         margin: 0;
         overflow: hidden;
-        background: radial-gradient(
-          circle at 50% 50%,
-          #0d1117 0%,
-          #000000 100%
-        );
-        font-family: "Inter", sans-serif;
-        color: white;
+        background: #05070c;
+        color: #fff;
+        font-family: Inter, system-ui, sans-serif;
         -webkit-tap-highlight-color: transparent;
-        -webkit-touch-callout: none;
+        touch-action: none;
+        user-select: none;
       }
 
-      #info {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        width: auto;
-        text-align: left;
-        pointer-events: none;
-        z-index: 10;
-        max-width: 90%;
-      }
-
-
-      #info h1 {
-        font-weight: 700;
-        letter-spacing: -0.5px;
-        margin: 0;
-        margin-bottom: 15px;
-        font-size: clamp(1.5rem, 6vw, 2.5rem);
-        background: white;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        text-shadow: 0 0 20px rgba(103, 108, 108, 0.4);
-        line-height: 1.2;
-      }
-
-
-      #info p {
-        font-size: clamp(0.55rem, 2.5vw, 0.75rem);
-        margin-top: 10px;
-        letter-spacing: 1px;
-        line-height: 1.8;
-        text-transform: uppercase;
-        font-weight: 500;
-      }
-
-      #info b {
-        color: var(--accent);
-        background: rgba(0, 242, 255, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-        border: 1px solid rgba(0, 242, 255, 0.2);
-        margin: 0 3px;
-        font-size: 0.9em;
-      }
-
-      /* Shape display - responsive positioning */
-      #shape-display {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        text-align: right;
-        z-index: 10;
-        pointer-events: none;
-        max-width: 40%;
-      }
-
-      #shape-label {
-        font-size: clamp(0.5rem, 2vw, 0.7rem);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        opacity: 0.5;
-        margin-bottom: 2px;
-      }
-
-      #current-shape-name {
-        font-size: clamp(1rem, 4vw, 1.5rem);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: var(--accent);
-        text-shadow: 0 0 20px rgba(0, 242, 255, 0.4);
-        line-height: 1.2;
-        word-break: break-word;
-      }
-      #webcam-feed {
-        display: block;
-        position: absolute;
-        bottom: 15px;
-        right: 15px;
-        width: clamp(120px, 30vw, 240px);
-        height: auto;
-        border-radius: 8px;
-        border: 2px solid rgba(255, 255, 255, 0.5);
+      #webcam {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
         transform: scaleX(-1);
-        z-index: 5;
-        background: #222;
-        transition: all 0.3s ease;
+        z-index: 0;
+        background: #111;
       }
 
+      #webcam.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #dim {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(0, 0, 0, 0.05) 0%,
+          rgba(0, 0, 0, 0.45) 100%
+        );
+      }
+
+      canvas {
+        position: fixed !important;
+        inset: 0;
+        z-index: 2;
+        display: block;
+      }
+
+      #brand {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 10;
+        pointer-events: none;
+        text-shadow: 0 2px 16px rgba(0, 0, 0, 0.75);
+      }
+
+      #brand h1 {
+        margin: 0;
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-weight: 600;
+        font-size: clamp(1.6rem, 5vw, 2.4rem);
+        letter-spacing: 0.02em;
+        line-height: 1;
+      }
+
+      #brand p {
+        margin: 6px 0 0;
+        font-size: clamp(0.55rem, 2vw, 0.72rem);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        opacity: 0.7;
+      }
+
+      #cam-toggle {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        z-index: 12;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: #fff;
+        backdrop-filter: blur(10px);
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.65rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+
+      #stats {
+        position: absolute;
+        left: 16px;
+        bottom: 16px;
+        z-index: 10;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        backdrop-filter: blur(12px);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 0.68rem;
+        line-height: 1.55;
+        letter-spacing: 0.06em;
+        min-width: 120px;
+        pointer-events: none;
+      }
+
+      #stats b {
+        color: var(--cyan);
+        font-weight: 600;
+      }
+
+      #hints {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        z-index: 10;
+        max-width: min(46vw, 260px);
+        text-align: right;
+        font-size: clamp(0.52rem, 2vw, 0.68rem);
+        line-height: 1.55;
+        letter-spacing: 0.04em;
+        opacity: 0.85;
+        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+        pointer-events: none;
+      }
+
+      #shape-name {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+        font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+        text-shadow: 0 0 18px rgba(232, 121, 249, 0.45);
+        pointer-events: none;
+      }
 
       #loading {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: var(--accent);
-        letter-spacing: 1px;
-        font-size: clamp(0.7rem, 3vw, 0.9rem);
-        text-transform: uppercase;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        background: rgba(5, 7, 12, 0.72);
         text-align: center;
-        padding: 0 20px;
-        width: 80%;
+        padding: 24px;
       }
 
-      #status-hint {
-        position: absolute;
-        left: 50%;
-        bottom: 18px;
-        transform: translateX(-50%);
-        z-index: 10;
-        font-size: clamp(0.52rem, 2vw, 0.68rem);
-        letter-spacing: 0.06em;
+      #loading .t {
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-size: clamp(1.5rem, 5vw, 2.2rem);
+      }
+
+      #loading .s {
+        margin-top: 8px;
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.7);
-        pointer-events: none;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.75);
-        white-space: nowrap;
+        opacity: 0.65;
+        color: var(--cyan);
       }
 
-
-      @media (max-width: 768px) {
-        #info {
-          top: 15px;
-          left: 15px;
-        }
-
-        #shape-display {
-          top: 15px;
-          right: 15px;
-        }
-
-        #webcam-feed {
-          bottom: 10px;
-          right: 10px;
-          width: clamp(100px, 25vw, 180px);
-        }
-
-        #info p {
-          line-height: 1.6;
-        }
-      }
-
-      @media (max-width: 480px) {
-        #info {
+      @media (max-width: 640px) {
+        #brand {
           top: 12px;
           left: 12px;
         }
-
-        #shape-display {
+        #cam-toggle {
           top: 12px;
           right: 12px;
+          padding: 7px 10px;
+          font-size: 0.55rem;
         }
-
-        #webcam-feed {
-          bottom: 8px;
-          right: 8px;
-          width: clamp(90px, 22vw, 150px);
-          border-radius: 6px;
-        }
-
-        #info h1 {
-          margin-bottom: 10px;
-          letter-spacing: 0.5px;
-        }
-
-        #info p {
-          letter-spacing: 0.8px;
-        }
-      }
-
-  
-      @media (max-width: 320px) {
-        #info p {
-          font-size: 0.5rem;
-          line-height: 1.4;
-        }
-
-        #shape-label {
-          font-size: 0.45rem;
-        }
-
-        #current-shape-name {
-          font-size: 0.9rem;
-        }
-      }
-
-      
-      @media (max-height: 500px) and (orientation: landscape) {
-        #info {
-          top: 10px;
+        #stats {
           left: 10px;
+          bottom: 10px;
+          font-size: 0.58rem;
         }
-
-        #info h1 {
-          font-size: 1.2rem;
-          margin-bottom: 8px;
-        }
-
-        #info p {
-          font-size: 0.5rem;
-          line-height: 1.3;
-          margin-top: 5px;
-        }
-
-        #shape-display {
-          top: 10px;
+        #hints {
           right: 10px;
-        }
-
-        #webcam-feed {
-          bottom: 5px;
-          right: 5px;
-          width: 100px;
-        }
-
-        #loading {
-          font-size: 0.6rem;
+          bottom: 10px;
+          max-width: 48vw;
+          font-size: 0.5rem;
         }
       }
     </style>
   </head>
   <body>
-    <div id="info">
-      <h1>Dòng Hạt Đồng Bộ</h1>
-      <p>
-        👋 DI CHUYỂN → <span style="opacity: 0.6">XOAY & ĐỔI MÀU</span><br />
-        🤏 <b>CHỤM CÁI + TRỎ</b> → <span style="opacity: 0.6">ĐỔI HÌNH</span><br />
-        ✊ <b>NẮM ĐẤM</b> → <span style="opacity: 0.6">PHÓNG TO</span><br />
-        🤏 <b>BÓ HẾT VÀO CÁI · TÍCH · MỞ</b> → <span style="opacity: 0.6">NỔ</span><br />
-        ☝️ <b>1 NGÓN</b> → <span style="opacity: 0.6">ĐÓNG BĂNG</span>
-      </p>
+    <video id="webcam" autoplay playsinline muted></video>
+    <div id="dim"></div>
+
+    <div id="brand">
+      <h1>Quả Cầu Hạt</h1>
+      <p>Trường hạt theo tay</p>
+    </div>
+    <button id="cam-toggle" type="button">Nền webcam</button>
+    <div id="shape-name">Quả cầu</div>
+
+    <div id="stats">
+      TAY: <b id="stat-hands">0</b><br />
+      NGÓN: <b id="stat-fingers">0</b><br />
+      BÁN KÍNH: <b id="stat-radius">0.55</b>
     </div>
 
-    <div id="shape-display">
-      <div id="shape-label">Hình hiện tại</div>
-      <div id="current-shape-name">Quả cầu</div>
+    <div id="hints">
+      1 tay → quả cầu nằm trên lòng bàn tay<br />
+      2 tay → kéo xa để mở rộng<br />
+      Chụm cái+trỏ → đổi hình<br />
+      Bó hết vào cái · tích · mở → nổ
     </div>
 
-    <div id="status-hint">Đưa tay vào khung webcam</div>
-    <div id="loading">Đang khởi tạo…</div>
-    <video id="webcam-feed" autoplay playsinline muted></video>
+    <div id="loading">
+      <div>
+        <div class="t">Quả Cầu Hạt</div>
+        <div class="s">Đang mở camera…</div>
+      </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
       crossorigin="anonymous"
@@ -299,46 +261,42 @@
     ></script>
 
     <script>
-    
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const PARTICLE_COUNT = isMobile ? 6000 : 12000;
+      const PARTICLE_COUNT = isMobile ? 5000 : 10000;
 
       let currentShape = "sphere";
       const shapeList = [
         "sphere",
         "cube",
         "pyramid",
-        "octahedron",
         "icosahedron",
         "heart",
         "saturn",
         "flower",
-        "fireworks",
       ];
       const shapeNamesVi = {
         sphere: "Quả cầu",
         cube: "Lập phương",
         pyramid: "Kim tự tháp",
-        octahedron: "Bát diện",
         icosahedron: "Đa giác 3D",
         heart: "Trái tim",
         saturn: "Sao Thổ",
         flower: "Bông hoa",
-        fireworks: "Pháo hoa",
       };
       let shapeIndex = 0;
-
-      let targetPositions = [];
+      let targetPositions = new Float32Array(PARTICLE_COUNT * 3);
       let explodeVel = new Float32Array(PARTICLE_COUNT * 3);
-      let handX = 0,
-        handY = 0;
-      let isPinching = false;
-      let wasPinching = false;
-      let isFist = false;
-      let isFrozen = false;
-      let lastPinchTime = 0;
 
-      // Chụm hết ngón → tích → xòe = nổ
+      // Smooth palm follow
+      const palmPos = new THREE.Vector3();
+      const palmPosTarget = new THREE.Vector3();
+      let radius = 0.55;
+      let radiusTarget = 0.55;
+      let handRotX = 0;
+      let handRotY = 0;
+
+      let wasPinching = false;
+      let lastMorphTime = 0;
       let explodeChargeMs = 0;
       let explodeReady = false;
       let exploding = false;
@@ -346,94 +304,82 @@
       let lastExplodeTime = 0;
       const EXPLODE_CHARGE_MS = 550;
       let lastFrameTime = performance.now();
+      let handCount = 0;
+      let fingerCount = 0;
 
-      // Scale vừa khung hình (đặc biệt điện thoại)
-      let fitScale = 1;
-      let expandScale = 1.65;
-      const statusHint = document.getElementById("status-hint");
+      const videoEl = document.getElementById("webcam");
+      const loadingEl = document.getElementById("loading");
+      const shapeNameEl = document.getElementById("shape-name");
+      const statHands = document.getElementById("stat-hands");
+      const statFingers = document.getElementById("stat-fingers");
+      const statRadius = document.getElementById("stat-radius");
+      const camToggle = document.getElementById("cam-toggle");
 
-      // --- Scene Setup ---
+      camToggle.addEventListener("click", () => {
+        videoEl.classList.toggle("hidden");
+        camToggle.textContent = videoEl.classList.contains("hidden")
+          ? "Bật nền webcam"
+          : "Nền webcam";
+      });
+
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
-        60,
+        55,
         window.innerWidth / window.innerHeight,
         0.1,
-        1000
+        100
       );
-      camera.position.z = 10;
+      camera.position.z = 5;
 
       const renderer = new THREE.WebGLRenderer({
         antialias: !isMobile,
         alpha: true,
         powerPreference: "high-performance",
       });
-      renderer.setPixelRatio(
-        Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2)
-      );
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
-      function updateViewportFit() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        camera.aspect = w / h;
-        camera.fov = h > w ? (isMobile ? 68 : 62) : isMobile ? 56 : 55;
-        camera.updateProjectionMatrix();
-        const vFOV = THREE.MathUtils.degToRad(camera.fov);
-        const visibleH = 2 * Math.tan(vFOV / 2) * camera.position.z;
-        const visibleW = visibleH * camera.aspect;
-        const minSide = Math.min(visibleW, visibleH);
-        // hình gốc ~ bán kính 4 → đường kính 8
-        fitScale = (minSide * 0.82) / 8;
-        expandScale = Math.min(fitScale * 1.7, (minSide * 0.95) / 8);
-      }
-      updateViewportFit();
-
-      function createHardCircleTexture() {
-        const canvas = document.createElement("canvas");
-        canvas.width = 64;
-        canvas.height = 64;
-        const ctx = canvas.getContext("2d");
-        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gradient.addColorStop(0, "rgba(255,255,255,1)");
-        gradient.addColorStop(0.5, "rgba(255,255,255,0.9)");
-        gradient.addColorStop(0.8, "rgba(255,255,255,0.1)");
-        gradient.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = gradient;
+      function createDotTexture() {
+        const c = document.createElement("canvas");
+        c.width = 64;
+        c.height = 64;
+        const ctx = c.getContext("2d");
+        const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        g.addColorStop(0, "rgba(255,255,255,1)");
+        g.addColorStop(0.45, "rgba(255,255,255,0.85)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g;
         ctx.fillRect(0, 0, 64, 64);
-        return new THREE.CanvasTexture(canvas);
+        return new THREE.CanvasTexture(c);
       }
 
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(PARTICLE_COUNT * 3);
       const colors = new Float32Array(PARTICLE_COUNT * 3);
-
       for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
-        positions[i] = (Math.random() - 0.5) * 20;
+        positions[i] = (Math.random() - 0.5) * 2;
         colors[i] = 1;
       }
-
-      geometry.setAttribute(
-        "position",
-        new THREE.BufferAttribute(positions, 3)
-      );
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
-        size: isMobile ? 0.15 : 0.12,
+        size: isMobile ? 0.045 : 0.035,
         vertexColors: true,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.9,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        map: createHardCircleTexture(),
+        map: createDotTexture(),
+        sizeAttenuation: true,
       });
 
       const particles = new THREE.Points(geometry, material);
-      particles.scale.setScalar(fitScale);
       scene.add(particles);
 
-      // --- Polyhedra helpers (mặt + cạnh → thấy rõ chiều sâu 3D khi xoay) ---
+      // --- Polyhedra ---
       function buildEdgesFromFaces(faces) {
         const key = (a, b) => {
           const s = (p) =>
@@ -445,16 +391,14 @@
         const map = new Map();
         for (const f of faces) {
           for (let i = 0; i < 3; i++) {
-            const a = f[i];
-            const b = f[(i + 1) % 3];
-            map.set(key(a, b), [a, b]);
+            map.set(key(f[i], f[(i + 1) % 3]), [f[i], f[(i + 1) % 3]]);
           }
         }
         return [...map.values()];
       }
 
       function samplePolyhedron(faces, edges, scale) {
-        if (Math.random() < 0.32 && edges.length) {
+        if (Math.random() < 0.3 && edges.length) {
           const e = edges[(Math.random() * edges.length) | 0];
           const t = Math.random();
           return [
@@ -492,25 +436,14 @@
       ];
       const CUBE_EDGES = buildEdgesFromFaces(CUBE_FACES);
 
-      const OCT_V = [
-        [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
-      ];
-      const OCT_FACES = [
-        [OCT_V[0], OCT_V[2], OCT_V[4]], [OCT_V[2], OCT_V[1], OCT_V[4]],
-        [OCT_V[1], OCT_V[3], OCT_V[4]], [OCT_V[3], OCT_V[0], OCT_V[4]],
-        [OCT_V[0], OCT_V[5], OCT_V[2]], [OCT_V[2], OCT_V[5], OCT_V[1]],
-        [OCT_V[1], OCT_V[5], OCT_V[3]], [OCT_V[3], OCT_V[5], OCT_V[0]],
-      ];
-      const OCT_EDGES = buildEdgesFromFaces(OCT_FACES);
-
       const PHI = (1 + Math.sqrt(5)) / 2;
       const ICO_RAW = [
         [0, 1, PHI], [0, -1, PHI], [0, 1, -PHI], [0, -1, -PHI],
         [1, PHI, 0], [-1, PHI, 0], [1, -PHI, 0], [-1, -PHI, 0],
         [PHI, 0, 1], [-PHI, 0, 1], [PHI, 0, -1], [-PHI, 0, -1],
       ].map((p) => {
-        const len = Math.hypot(p[0], p[1], p[2]);
-        return [p[0] / len, p[1] / len, p[2] / len];
+        const n = Math.hypot(p[0], p[1], p[2]);
+        return [p[0] / n, p[1] / n, p[2] / n];
       });
       const ICO_FACES = [
         [0, 1, 8], [0, 8, 4], [0, 4, 5], [0, 5, 9], [0, 9, 1],
@@ -520,9 +453,9 @@
       ].map((idx) => idx.map((i) => ICO_RAW[i]));
       const ICO_EDGES = buildEdgesFromFaces(ICO_FACES);
 
-      const PYR_APEX = [0, 1.35, 0];
+      const PYR_APEX = [0, 1.2, 0];
       const PYR_BASE = [
-        [-1, -1.1, -1], [1, -1.1, -1], [1, -1.1, 1], [-1, -1.1, 1],
+        [-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1],
       ];
       const PYR_FACES = [
         [PYR_APEX, PYR_BASE[0], PYR_BASE[1]],
@@ -534,122 +467,130 @@
       ];
       const PYR_EDGES = buildEdgesFromFaces(PYR_FACES);
 
-      // --- Shapes Math ---
+      // Unit shapes (~radius 1), then scaled by `radius`
       const shapes = {
         sphere: (i) => {
           const phi = Math.acos(-1 + (2 * i) / PARTICLE_COUNT);
           const theta = Math.sqrt(PARTICLE_COUNT * Math.PI) * phi;
           return [
-            4 * Math.cos(theta) * Math.sin(phi),
-            4 * Math.sin(theta) * Math.sin(phi),
-            4 * Math.cos(phi),
+            Math.cos(theta) * Math.sin(phi),
+            Math.sin(theta) * Math.sin(phi),
+            Math.cos(phi),
           ];
         },
-        cube: () => samplePolyhedron(CUBE_FACES, CUBE_EDGES, 2.55),
-        pyramid: () => samplePolyhedron(PYR_FACES, PYR_EDGES, 2.7),
-        octahedron: () => samplePolyhedron(OCT_FACES, OCT_EDGES, 3.3),
-        icosahedron: () => samplePolyhedron(ICO_FACES, ICO_EDGES, 3.4),
-        heart: (i) => {
-          const phi = Math.random() * Math.PI * 2;
-          const x = 16 * Math.pow(Math.sin(phi), 3);
+        cube: () => samplePolyhedron(CUBE_FACES, CUBE_EDGES, 0.72),
+        pyramid: () => samplePolyhedron(PYR_FACES, PYR_EDGES, 0.75),
+        icosahedron: () => samplePolyhedron(ICO_FACES, ICO_EDGES, 0.95),
+        heart: () => {
+          const t = Math.random() * Math.PI * 2;
+          const x = 16 * Math.pow(Math.sin(t), 3);
           const y =
-            13 * Math.cos(phi) -
-            5 * Math.cos(2 * phi) -
-            2 * Math.cos(3 * phi) -
-            Math.cos(4 * phi);
+            13 * Math.cos(t) -
+            5 * Math.cos(2 * t) -
+            2 * Math.cos(3 * t) -
+            Math.cos(4 * t);
           const fill = Math.pow(Math.random(), 0.35);
-          return [x * 0.25 * fill, y * 0.25 * fill, (Math.random() - 0.5) * 1.6 * fill];
+          return [
+            x * 0.055 * fill,
+            y * 0.055 * fill,
+            (Math.random() - 0.5) * 0.35 * fill,
+          ];
         },
         saturn: (i) => {
-          if (i < PARTICLE_COUNT * 0.6) {
-            const phi = Math.acos(-1 + (2 * i) / (PARTICLE_COUNT * 0.6));
-            const theta = Math.sqrt(PARTICLE_COUNT * 0.6 * Math.PI) * phi;
+          if (i < PARTICLE_COUNT * 0.55) {
+            const phi = Math.acos(2 * Math.random() - 1);
+            const theta = Math.random() * Math.PI * 2;
+            const r = 0.55 * Math.pow(Math.random(), 0.2);
             return [
-              2.5 * Math.cos(theta) * Math.sin(phi),
-              2.5 * Math.sin(theta) * Math.sin(phi),
-              2.5 * Math.cos(phi),
-            ];
-          } else {
-            const angle = Math.random() * Math.PI * 2;
-            const r = 4.5 + Math.random() * 2;
-            return [
-              r * Math.cos(angle),
-              (Math.random() - 0.5) * 0.3,
-              r * Math.sin(angle),
+              r * Math.sin(phi) * Math.cos(theta),
+              r * Math.sin(phi) * Math.sin(theta),
+              r * Math.cos(phi),
             ];
           }
+          const a = Math.random() * Math.PI * 2;
+          const r = 0.85 + Math.random() * 0.35;
+          return [r * Math.cos(a), (Math.random() - 0.5) * 0.06, r * Math.sin(a)];
         },
-        flower: (i) => {
+        flower: () => {
           const u = Math.random() * Math.PI * 2;
           const v = Math.random() * Math.PI;
-          const r = 3 + Math.sin(5 * u) * Math.sin(5 * v);
+          const r = 0.7 + 0.25 * Math.sin(5 * u) * Math.sin(5 * v);
           return [
             r * Math.sin(v) * Math.cos(u),
             r * Math.sin(v) * Math.sin(u),
             r * Math.cos(v),
           ];
         },
-        fireworks: (i) => {
-          const r = Math.pow(Math.random(), 1 / 3) * 7;
-          const theta = Math.random() * Math.PI * 2;
-          const phi = Math.acos(2 * Math.random() - 1);
-          return [
-            r * Math.sin(phi) * Math.cos(theta),
-            r * Math.sin(phi) * Math.sin(theta),
-            r * Math.cos(phi),
-          ];
-        },
       };
 
-      function getTargetPositions(shapeName) {
-        const arr = new Float32Array(PARTICLE_COUNT * 3);
+      function rebuildTargets() {
+        const fn = shapes[currentShape] || shapes.sphere;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
-          const [x, y, z] = shapes[shapeName](i);
-          arr[i * 3] = x;
-          arr[i * 3 + 1] = y;
-          arr[i * 3 + 2] = z;
+          const [x, y, z] = fn(i);
+          targetPositions[i * 3] = x;
+          targetPositions[i * 3 + 1] = y;
+          targetPositions[i * 3 + 2] = z;
         }
-        return arr;
       }
-
-      targetPositions = getTargetPositions(currentShape);
+      rebuildTargets();
 
       function cycleShape() {
         const now = Date.now();
-        if (now - lastPinchTime < 2200) return;
-        if (exploding) return;
-
+        if (now - lastMorphTime < 1800 || exploding) return;
         shapeIndex = (shapeIndex + 1) % shapeList.length;
         currentShape = shapeList[shapeIndex];
-
-        document.getElementById("current-shape-name").innerText =
-          shapeNamesVi[currentShape] || currentShape;
-
-        targetPositions = getTargetPositions(currentShape);
-        lastPinchTime = now;
-        statusHint.textContent =
-          "Đổi hình · " + (shapeNamesVi[currentShape] || currentShape);
+        shapeNameEl.textContent = shapeNamesVi[currentShape];
+        rebuildTargets();
+        lastMorphTime = now;
       }
 
-      function distTip(a, b) {
-        return Math.hypot(a.x - b.x, a.y - b.y);
+      function landmarkToWorld(x, y, out) {
+        // Mirrored fullscreen webcam → NDC → world at z≈0
+        const ndcX = (1 - x) * 2 - 1;
+        const ndcY = (1 - y) * 2 - 1;
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const dist = camera.position.z;
+        const visibleH = 2 * Math.tan(vFOV / 2) * dist;
+        const visibleW = visibleH * camera.aspect;
+        out.set(ndcX * visibleW * 0.5, ndcY * visibleH * 0.5, 0);
       }
 
-      function tipToThumbStats(lm) {
-        const ds = [8, 12, 16, 20].map((i) => distTip(lm[4], lm[i]));
-        const avg = (ds[0] + ds[1] + ds[2] + ds[3]) / 4;
-        const max = Math.max(ds[0], ds[1], ds[2], ds[3]);
-        return { avg, max, ds };
+      function palmCenter(lm, out) {
+        const cx =
+          (lm[0].x + lm[5].x + lm[9].x + lm[13].x + lm[17].x) / 5 * 0.35 +
+          lm[9].x * 0.65;
+        const cy =
+          (lm[0].y + lm[5].y + lm[9].y + lm[13].y + lm[17].y) / 5 * 0.35 +
+          lm[9].y * 0.65;
+        landmarkToWorld(cx, cy, out);
+      }
+
+      function countExtended(lm) {
+        let n = 0;
+        if (lm[8].y < lm[6].y) n++;
+        if (lm[12].y < lm[10].y) n++;
+        if (lm[16].y < lm[14].y) n++;
+        if (lm[20].y < lm[18].y) n++;
+        return n;
+      }
+
+      function tipThumbAvg(lm) {
+        const tips = [8, 12, 16, 20];
+        let s = 0;
+        for (const i of tips) {
+          s += Math.hypot(lm[4].x - lm[i].x, lm[4].y - lm[i].y);
+        }
+        return s / 4;
       }
 
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastExplodeTime < 1800) return;
+        if (now - lastExplodeTime < 1600) return;
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
         exploding = true;
-        explodeUntil = now + 2000;
+        explodeUntil = now + 1800;
         const pos = particles.geometry.attributes.position.array;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const ix = i * 3;
@@ -657,97 +598,103 @@
           const y = pos[ix + 1];
           const z = pos[ix + 2];
           const len = Math.hypot(x, y, z) || 1;
-          const power = 0.16 + Math.random() * 0.32;
-          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.07;
-          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.07;
-          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.07;
+          const power = (0.04 + Math.random() * 0.08) * Math.max(radius, 0.4);
+          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.02;
+          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.02;
+          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.02;
         }
-        statusHint.textContent = "Bùng nổ!";
-        videoElement.style.borderColor = "var(--snap)";
-        videoElement.style.boxShadow = "0 0 28px rgba(251, 191, 36, 0.6)";
       }
 
-      // --- Hand Tracking ---
-      const videoElement = document.getElementById("webcam-feed");
+      const tmpA = new THREE.Vector3();
+      const tmpB = new THREE.Vector3();
+
       const hands = new Hands({
         locateFile: (file) =>
           `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
       });
-
       hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2,
         modelComplexity: isMobile ? 0 : 1,
         minDetectionConfidence: 0.6,
         minTrackingConfidence: 0.6,
       });
 
       hands.onResults((results) => {
-        document.getElementById("loading").style.display = "none";
+        loadingEl.style.display = "none";
         const now = performance.now();
         const dt = Math.min(0.05, (now - lastFrameTime) / 1000);
         lastFrameTime = now;
 
-        if (
-          !results.multiHandLandmarks ||
-          results.multiHandLandmarks.length === 0
-        ) {
+        const lms = results.multiHandLandmarks || [];
+        handCount = lms.length;
+
+        if (handCount === 0) {
+          fingerCount = 0;
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
           explodeReady = false;
           wasPinching = false;
-          isFist = false;
-          isFrozen = false;
-          isPinching = false;
-          // Giữ quán tính xoay nhẹ như bản gốc khi mất tay
-          handX *= 0.92;
-          handY *= 0.92;
-          statusHint.textContent = "Đưa tay vào khung webcam";
-          videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
-          videoElement.style.boxShadow = "none";
+          radiusTarget = THREE.MathUtils.lerp(radiusTarget, 0.55, 0.05);
+          palmPosTarget.set(0, 0, 0);
+          handRotX *= 0.9;
+          handRotY *= 0.9;
+          updateStats();
           return;
         }
 
-        const lm = results.multiHandLandmarks[0];
+        const primary = lms[0];
+        fingerCount = countExtended(primary);
 
-        // Bản gốc Hand-Sync: theo đầu ngón trỏ
-        handX = (1 - lm[8].x) * 2 - 1;
-        handY = (1 - lm[8].y) * 2 - 1;
+        // Position: 1 tay → lòng bàn tay · 2 tay → giữa 2 lòng bàn tay
+        if (handCount >= 2) {
+          palmCenter(lms[0], tmpA);
+          palmCenter(lms[1], tmpB);
+          palmPosTarget.copy(tmpA).add(tmpB).multiplyScalar(0.5);
 
-        const isIndexDown = lm[8].y > lm[6].y;
-        const isMiddleDown = lm[12].y > lm[10].y;
-        const isRingDown = lm[16].y > lm[14].y;
-        const isPinkyDown = lm[20].y > lm[18].y;
-        const fingersUp =
-          (!isIndexDown ? 1 : 0) +
-          (!isMiddleDown ? 1 : 0) +
-          (!isRingDown ? 1 : 0) +
-          (!isPinkyDown ? 1 : 0);
+          // Khoảng cách 2 tay → bán kính mở rộng
+          const distHands = tmpA.distanceTo(tmpB);
+          radiusTarget = THREE.MathUtils.clamp(
+            THREE.MathUtils.mapLinear(distHands, 0.6, 4.5, 0.45, 1.85),
+            0.4,
+            2.0
+          );
+        } else {
+          palmCenter(primary, palmPosTarget);
+          // 1 tay: size theo bề rộng lòng bàn tay
+          const span = Math.hypot(
+            primary[5].x - primary[17].x,
+            primary[5].y - primary[17].y
+          );
+          radiusTarget = THREE.MathUtils.clamp(
+            THREE.MathUtils.mapLinear(span, 0.08, 0.28, 0.38, 0.72),
+            0.35,
+            0.8
+          );
+        }
 
-        const pinchDist = distTip(lm[4], lm[8]);
-        const { avg: tipThumbAvg, max: tipThumbMax, ds } = tipToThumbStats(lm);
-        const [dIndex, dMiddle, dRing, dPinky] = ds;
+        // Xoay nhẹ theo tay (cảm giác Hand-Sync)
+        handRotY = (1 - primary[8].x) * 2 - 1;
+        handRotX = (1 - primary[8].y) * 2 - 1;
 
-        // --- Ưu tiên: nắm đấm → nổ → đổi hình ---
-        // Nắm đấm: 4 ngón co, cái nằm bên (xa đầu ngón)
-        isFist =
-          isIndexDown &&
-          isMiddleDown &&
-          isRingDown &&
-          isPinkyDown &&
-          tipThumbAvg > 0.085;
+        const pinchDist = Math.hypot(
+          primary[4].x - primary[8].x,
+          primary[4].y - primary[8].y
+        );
+        const avgTips = tipThumbAvg(primary);
+        const isPinching = pinchDist < 0.05 && avgTips > 0.07 && handCount === 1;
+        if (isPinching && !wasPinching) cycleShape();
+        wasPinching = isPinching;
 
-        // Nổ: cả 4 đầu ngón đều gần ngón cái (bó lại)
+        // Nổ: bó hết đầu ngón vào cái → tích → mở
         const explodePose =
-          !isFist &&
-          dIndex < 0.08 &&
-          dMiddle < 0.08 &&
-          dRing < 0.085 &&
-          dPinky < 0.09 &&
-          tipThumbAvg < 0.07 &&
-          tipThumbMax < 0.1;
-
-        // Xòe / nhả sau khi tích (không cần xòe hết 4 ngón)
-        const releasedOpen =
-          tipThumbAvg > 0.13 && (fingersUp >= 2 || pinchDist > 0.1);
+          handCount === 1 &&
+          avgTips < 0.065 &&
+          [8, 12, 16, 20].every(
+            (i) =>
+              Math.hypot(primary[4].x - primary[i].x, primary[4].y - primary[i].y) <
+              0.09
+          );
+        const released =
+          avgTips > 0.12 && fingerCount >= 2;
 
         if (!exploding && explodePose) {
           explodeChargeMs += dt * 1000;
@@ -755,165 +702,106 @@
             explodeReady = true;
             explodeChargeMs = EXPLODE_CHARGE_MS;
           }
-        } else if (explodeReady && releasedOpen) {
+        } else if (explodeReady && released) {
           triggerExplode();
-        } else if (isFist) {
-          explodeChargeMs = 0;
-          explodeReady = false;
         } else if (!explodePose) {
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 350);
           if (explodeChargeMs < EXPLODE_CHARGE_MS * 0.4) explodeReady = false;
         }
 
-        // Đổi hình: chụm cái + trỏ (Hand-Sync gốc), cạnh lên để không spam
-        // Không phải nắm đấm / không đang bó cả bàn để nổ
-        isPinching =
-          pinchDist < 0.06 &&
-          !isFist &&
-          !explodePose &&
-          explodeChargeMs < 200 &&
-          // ít nhất 1 trong middle/ring/pinky không dính cái (tránh nhầm bó nổ)
-          (dMiddle > 0.055 || dRing > 0.055 || dPinky > 0.055);
-
-        if (isPinching && !wasPinching) cycleShape();
-        wasPinching = isPinching;
-
-        isFrozen =
-          !isIndexDown &&
-          isMiddleDown &&
-          isRingDown &&
-          isPinkyDown &&
-          !isPinching &&
-          !explodePose &&
-          explodeChargeMs < 80;
-
-        if (exploding) {
-          statusHint.textContent = "Vỡ tung…";
-          videoElement.style.borderColor = "var(--snap)";
-          videoElement.style.boxShadow = "0 0 28px rgba(251, 191, 36, 0.6)";
-        } else if (isFist) {
-          statusHint.textContent = "Nắm đấm · phóng to";
-          videoElement.style.borderColor = "var(--accent)";
-          videoElement.style.boxShadow = "0 0 30px rgba(0, 242, 255, 0.6)";
-        } else if (explodeChargeMs > 50 || explodeReady) {
-          const pct = Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100);
-          statusHint.textContent = explodeReady
-            ? "Đã tích · MỞ TAY ra để nổ!"
-            : "Bó ngón vào cái · tích " + pct + "%";
-          videoElement.style.borderColor = "var(--snap)";
-          videoElement.style.boxShadow = "0 0 22px rgba(251, 191, 36, 0.5)";
-        } else if (isFrozen) {
-          statusHint.textContent = "Đóng băng";
-          videoElement.style.borderColor = "var(--freeze)";
-          videoElement.style.boxShadow = "none";
-        } else if (isPinching) {
-          statusHint.textContent = "Đổi hình…";
-          videoElement.style.borderColor = "var(--morph)";
-          videoElement.style.boxShadow = "none";
-        } else {
-          statusHint.textContent =
-            "Chụm cái+trỏ đổi hình · bó hết vào cái rồi mở để nổ";
-          videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
-          videoElement.style.boxShadow = "none";
-        }
+        updateStats();
       });
 
-      const cameraUtils = new Camera(videoElement, {
+      function updateStats() {
+        statHands.textContent = String(handCount);
+        statFingers.textContent = String(fingerCount);
+        statRadius.textContent = radius.toFixed(2);
+      }
+
+      const cam = new Camera(videoEl, {
         onFrame: async () => {
-          await hands.send({ image: videoElement });
+          await hands.send({ image: videoEl });
         },
-        width: isMobile ? 480 : 720,
-        height: isMobile ? 320 : 480,
+        width: isMobile ? 640 : 960,
+        height: isMobile ? 480 : 720,
       });
-      cameraUtils.start();
+      cam.start();
 
-      // --- Animation Loop ---
-      const clock = new THREE.Clock();
       const colorObj = new THREE.Color();
+      const clock = new THREE.Clock();
 
       function animate() {
         requestAnimationFrame(animate);
-        const time = clock.getElapsedTime();
+        const t = clock.getElapsedTime();
         const now = Date.now();
-        const posAttr = particles.geometry.attributes.position;
-        const colAttr = particles.geometry.attributes.color;
+        const pos = particles.geometry.attributes.position;
+        const col = particles.geometry.attributes.color;
+
+        // Mượt theo lòng bàn tay
+        palmPos.lerp(palmPosTarget, 0.22);
+        radius += (radiusTarget - radius) * 0.14;
+        particles.position.copy(palmPos);
+        particles.scale.setScalar(radius);
+
+        // Xoay nhẹ theo tay
+        particles.rotation.y += 0.004 + handRotY * 0.035;
+        particles.rotation.x += handRotX * 0.018;
 
         if (exploding) {
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
-            posAttr.array[ix] += explodeVel[ix];
-            posAttr.array[ix + 1] += explodeVel[ix + 1];
-            posAttr.array[ix + 2] += explodeVel[ix + 2];
-            explodeVel[ix] *= 0.985;
-            explodeVel[ix + 1] *= 0.985;
-            explodeVel[ix + 2] *= 0.985;
-            explodeVel[ix + 1] -= 0.0025;
+            pos.array[ix] += explodeVel[ix];
+            pos.array[ix + 1] += explodeVel[ix + 1];
+            pos.array[ix + 2] += explodeVel[ix + 2];
+            explodeVel[ix] *= 0.98;
+            explodeVel[ix + 1] *= 0.98;
+            explodeVel[ix + 2] *= 0.98;
           }
-          posAttr.needsUpdate = true;
-          if (now > explodeUntil) {
-            exploding = false;
-            statusHint.textContent = "Đang họp lại…";
-          }
-        } else if (!isFrozen) {
-          // Xoay + chạy hạt đúng như Hand-Sync gốc
-          particles.rotation.y += 0.003 + handX * 0.04;
-          particles.rotation.x += handY * 0.02;
-
-          const s = isFist ? expandScale : fitScale;
-          particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
-
+          pos.needsUpdate = true;
+          if (now > explodeUntil) exploding = false;
+        } else {
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
-            posAttr.array[ix] +=
-              (targetPositions[ix] - posAttr.array[ix]) * 0.08;
-            posAttr.array[ix + 1] +=
-              (targetPositions[ix + 1] - posAttr.array[ix + 1]) * 0.08;
-            posAttr.array[ix + 2] +=
-              (targetPositions[ix + 2] - posAttr.array[ix + 2]) * 0.08;
+            pos.array[ix] += (targetPositions[ix] - pos.array[ix]) * 0.1;
+            pos.array[ix + 1] += (targetPositions[ix + 1] - pos.array[ix + 1]) * 0.1;
+            pos.array[ix + 2] += (targetPositions[ix + 2] - pos.array[ix + 2]) * 0.1;
+            pos.array[ix] += Math.sin(t * 0.8 + i) * 0.0015;
+            pos.array[ix + 1] += Math.cos(t * 0.8 + i) * 0.0015;
 
-            if (currentShape !== "fireworks") {
-              posAttr.array[ix] += Math.sin(time * 0.5 + i) * 0.005;
-              posAttr.array[ix + 1] += Math.cos(time * 0.5 + i) * 0.005;
-            } else {
-              posAttr.array[ix + 1] -= 0.02;
-              if (posAttr.array[ix + 1] < -6) posAttr.array[ix + 1] = 6;
-            }
-
-            const dist = Math.hypot(posAttr.array[ix], posAttr.array[ix + 1]);
-            const hue = ((handY + 1) * 0.5 + dist * 0.1) % 1;
-            colorObj.setHSL(hue, 0.8, 0.6);
-            colAttr.array[ix] = colorObj.r;
-            colAttr.array[ix + 1] = colorObj.g;
-            colAttr.array[ix + 2] = colorObj.b;
+            const dist = Math.hypot(pos.array[ix], pos.array[ix + 1]);
+            // Magenta / pink như ảnh mẫu
+            const hue = (0.85 + dist * 0.08 + handRotY * 0.04) % 1;
+            colorObj.setHSL(hue, 0.75, 0.62);
+            col.array[ix] = colorObj.r;
+            col.array[ix + 1] = colorObj.g;
+            col.array[ix + 2] = colorObj.b;
           }
-          posAttr.needsUpdate = true;
-          colAttr.needsUpdate = true;
+          pos.needsUpdate = true;
+          col.needsUpdate = true;
         }
 
+        if (explodeReady) {
+          shapeNameEl.textContent = "Đã tích · mở tay để nổ";
+        } else if (explodeChargeMs > 40) {
+          shapeNameEl.textContent =
+            "Tích nổ " + Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100) + "%";
+        } else if (!exploding) {
+          shapeNameEl.textContent = shapeNamesVi[currentShape];
+        }
+
+        updateStats();
         renderer.render(scene, camera);
       }
 
-      window.addEventListener("resize", () => {
+      function onResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.fov = window.innerHeight > window.innerWidth ? 60 : 52;
+        camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        updateViewportFit();
-      });
-
-      window.addEventListener("orientationchange", () => {
-        setTimeout(() => {
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          updateViewportFit();
-        }, 120);
-      });
-
-   
-      document.addEventListener(
-        "touchmove",
-        function (e) {
-          if (e.scale !== 1) e.preventDefault();
-        },
-        { passive: false }
-      );
-
+      }
+      window.addEventListener("resize", onResize);
+      window.addEventListener("orientationchange", () => setTimeout(onResize, 120));
+      onResize();
       animate();
     </script>
   </body>
