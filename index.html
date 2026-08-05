@@ -250,8 +250,8 @@
         icosahedron: "Khối tinh thể",
         heart: "Trái tim",
         star: "Ngôi sao",
-        cat: "Con mèo",
-        bunny: "Con thỏ",
+        cat: "Mèo hologram",
+        bunny: "Thỏ vũ trụ",
         moon: "Mặt trăng",
         flower: "Bông hoa",
         saturn: "Sao Thổ",
@@ -565,138 +565,9 @@
           }
           return inCircle(0, 0, 1.4);
         },
-        cat: (i) => {
-          // Full cat: head + ears + body + legs + tail
-          const n = PARTICLE_COUNT;
-          const r = i / n;
-          if (r < 0.28) {
-            // head
-            return inCircle(0, 1.55, 1.45);
-          } else if (r < 0.34) {
-            // left ear
-            const t = Math.random();
-            return [
-              -0.95 + t * 0.7 + (Math.random() - 0.5) * 0.15,
-              2.6 + t * 1.35,
-              (Math.random() - 0.5) * 0.4,
-            ];
-          } else if (r < 0.4) {
-            // right ear
-            const t = Math.random();
-            return [
-              0.95 - t * 0.7 + (Math.random() - 0.5) * 0.15,
-              2.6 + t * 1.35,
-              (Math.random() - 0.5) * 0.4,
-            ];
-          } else if (r < 0.44) {
-            return inCircle(-0.45, 1.65, 0.22);
-          } else if (r < 0.48) {
-            return inCircle(0.45, 1.65, 0.22);
-          } else if (r < 0.72) {
-            // oval body
-            const a = Math.random() * Math.PI * 2;
-            const rad = Math.sqrt(Math.random());
-            return [
-              Math.cos(a) * rad * 1.55,
-              -0.35 + Math.sin(a) * rad * 1.15,
-              (Math.random() - 0.5) * 1.1,
-            ];
-          } else if (r < 0.78) {
-            // front left leg
-            return [
-              -0.7 + (Math.random() - 0.5) * 0.35,
-              -1.5 - Math.random() * 1.3,
-              0.35 + (Math.random() - 0.5) * 0.3,
-            ];
-          } else if (r < 0.84) {
-            // front right leg
-            return [
-              0.7 + (Math.random() - 0.5) * 0.35,
-              -1.5 - Math.random() * 1.3,
-              0.35 + (Math.random() - 0.5) * 0.3,
-            ];
-          } else if (r < 0.9) {
-            // back left leg
-            return [
-              -0.55 + (Math.random() - 0.5) * 0.3,
-              -1.35 - Math.random() * 1.15,
-              -0.45 + (Math.random() - 0.5) * 0.3,
-            ];
-          } else if (r < 0.96) {
-            // back right leg
-            return [
-              0.55 + (Math.random() - 0.5) * 0.3,
-              -1.35 - Math.random() * 1.15,
-              -0.45 + (Math.random() - 0.5) * 0.3,
-            ];
-          } else {
-            // curved tail
-            const t = Math.random();
-            const ang = t * Math.PI * 0.9;
-            return [
-              1.3 + Math.sin(ang) * 1.6,
-              -0.2 + Math.cos(ang) * 1.1 - t * 0.4,
-              -0.6 + (Math.random() - 0.5) * 0.35,
-            ];
-          }
-        },
-        bunny: (i) => {
-          // Full cute bunny: head, long ears, body, feet, cotton tail
-          const n = PARTICLE_COUNT;
-          const r = i / n;
-          if (r < 0.26) {
-            // round head
-            return inEllipse(0, 1.45, 1.35, 1.25, 1.2);
-          } else if (r < 0.38) {
-            // left long ear
-            const t = Math.random();
-            return [
-              -0.55 + (Math.random() - 0.5) * 0.55,
-              2.4 + t * 2.5,
-              0.15 + (Math.random() - 0.5) * 0.35,
-            ];
-          } else if (r < 0.5) {
-            // right long ear
-            const t = Math.random();
-            return [
-              0.55 + (Math.random() - 0.5) * 0.55,
-              2.4 + t * 2.5,
-              0.15 + (Math.random() - 0.5) * 0.35,
-            ];
-          } else if (r < 0.54) {
-            // left eye
-            return inCircle(-0.4, 1.55, 0.18);
-          } else if (r < 0.58) {
-            // right eye
-            return inCircle(0.4, 1.55, 0.18);
-          } else if (r < 0.61) {
-            // nose / blush
-            return inCircle(0, 1.2, 0.2);
-          } else if (r < 0.82) {
-            // fluffy oval body
-            return inEllipse(0, -0.55, 1.7, 1.35, 1.4);
-          } else if (r < 0.87) {
-            // left foot
-            return inEllipse(-0.85, -1.85, 0.55, 0.35, 0.5);
-          } else if (r < 0.92) {
-            // right foot
-            return inEllipse(0.85, -1.85, 0.55, 0.35, 0.5);
-          } else if (r < 0.96) {
-            // tiny front paws
-            return inEllipse(
-              (Math.random() < 0.5 ? -0.45 : 0.45),
-              -0.15,
-              0.28,
-              0.22,
-              0.4
-            );
-          } else {
-            // cotton-ball tail
-            return inCircle(0.15, -1.05, 0.55).map((v, idx) =>
-              idx === 2 ? v - 0.9 : v
-            );
-          }
-        },
+        // cat/bunny built by dedicated hologram/cosmic builders below
+        cat: () => [0, 0, 0],
+        bunny: () => [0, 0, 0],
         moon: (i) => {
           // Crescent: outer disk minus offset disk
           for (let tries = 0; tries < 8; tries++) {
@@ -760,8 +631,248 @@
         },
       };
 
+      let shapeColorBuffer = null;
+
+      function writeColor(colors, i, h, s, l) {
+        colorObj.setHSL(h, s, l);
+        const ix = i * 3;
+        colors[ix] = colorObj.r;
+        colors[ix + 1] = colorObj.g;
+        colors[ix + 2] = colorObj.b;
+      }
+
+      function writePos(arr, i, x, y, z) {
+        const ix = i * 3;
+        arr[ix] = x;
+        arr[ix + 1] = y;
+        arr[ix + 2] = z;
+      }
+
+      // Hologram sitting kitten (cyan point-cloud + glow accents)
+      function buildHoloCat(arr, colors) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const roll = Math.random();
+          let x, y, z;
+          let accent = false;
+          let eye = false;
+
+          if (roll < 0.22) {
+            // head
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.55) * 1.15;
+            x = Math.cos(a) * r * 0.95;
+            y = 1.75 + Math.sin(a) * r * 0.9;
+            z = 0.35 + (Math.random() - 0.5) * 1.1;
+          } else if (roll < 0.28) {
+            // left ear
+            const t = Math.random();
+            x = -0.55 - t * 0.35 + (Math.random() - 0.5) * 0.2;
+            y = 2.55 + t * 1.35;
+            z = 0.2 + (Math.random() - 0.5) * 0.35;
+            accent = t > 0.85;
+          } else if (roll < 0.34) {
+            // right ear
+            const t = Math.random();
+            x = 0.65 + t * 0.3 + (Math.random() - 0.5) * 0.2;
+            y = 2.5 + t * 1.3;
+            z = 0.15 + (Math.random() - 0.5) * 0.35;
+            accent = t > 0.85;
+          } else if (roll < 0.38) {
+            // glowing eyes
+            const left = Math.random() < 0.5;
+            x = (left ? -0.38 : 0.42) + (Math.random() - 0.5) * 0.16;
+            y = 1.85 + (Math.random() - 0.5) * 0.14;
+            z = 0.95 + (Math.random() - 0.5) * 0.2;
+            eye = true;
+            accent = true;
+          } else if (roll < 0.62) {
+            // sitting torso / chest
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.5);
+            x = Math.cos(a) * r * 1.35 + 0.1;
+            y = 0.15 + Math.sin(a) * r * 1.25;
+            z = (Math.random() - 0.5) * 1.35;
+            accent = Math.random() < 0.04;
+          } else if (roll < 0.72) {
+            // haunch (sitting hip)
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.55);
+            x = 0.85 + Math.cos(a) * r * 0.85;
+            y = -0.35 + Math.sin(a) * r * 0.9;
+            z = -0.35 + (Math.random() - 0.5) * 0.9;
+          } else if (roll < 0.8) {
+            // front paws
+            const left = Math.random() < 0.5;
+            x = (left ? -0.55 : 0.35) + (Math.random() - 0.5) * 0.4;
+            y = -1.55 + (Math.random() - 0.5) * 0.45;
+            z = 0.55 + (Math.random() - 0.5) * 0.45;
+            accent = Math.random() < 0.12;
+          } else if (roll < 0.86) {
+            // back paw tucked
+            x = 0.7 + (Math.random() - 0.5) * 0.5;
+            y = -1.45 + (Math.random() - 0.5) * 0.4;
+            z = -0.55 + (Math.random() - 0.5) * 0.4;
+          } else if (roll < 0.96) {
+            // curled tail
+            const t = Math.random();
+            const ang = -0.2 + t * 2.2;
+            x = 1.15 + Math.sin(ang) * (1.1 + t * 0.4);
+            y = -0.15 + Math.cos(ang) * 1.15 * (1 - t * 0.25);
+            z = -0.7 + Math.sin(t * 3) * 0.35;
+            accent = t > 0.9;
+          } else {
+            // cheek / muzzle fill
+            x = (Math.random() - 0.5) * 0.7;
+            y = 1.45 + (Math.random() - 0.5) * 0.35;
+            z = 0.85 + (Math.random() - 0.5) * 0.35;
+          }
+
+          // hologram scanlines
+          if (!eye && Math.random() < 0.55) {
+            y = Math.round(y * 16) / 16;
+          }
+
+          writePos(arr, i, x, y, z);
+          if (eye) writeColor(colors, i, 0.55, 0.35, 0.95);
+          else if (accent) writeColor(colors, i, 0.52, 0.55, 0.88);
+          else {
+            const cool = 0.5 + (z + 1) * 0.02 + Math.random() * 0.03;
+            writeColor(colors, i, cool, 0.85, 0.55 + Math.random() * 0.12);
+          }
+        }
+      }
+
+      // Cosmic sitting bunny (pastel pink→blue + galaxy sparkles)
+      function buildCosmicBunny(arr, colors) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const roll = Math.random();
+          let x, y, z;
+          let part = "fur";
+
+          if (roll < 0.18) {
+            // head (facing left)
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.55) * 1.05;
+            x = -1.15 + Math.cos(a) * r * 0.95;
+            y = 0.95 + Math.sin(a) * r * 0.9;
+            z = (Math.random() - 0.5) * 1.05;
+            part = "head";
+          } else if (roll < 0.3) {
+            // long ears up-back
+            const left = Math.random() < 0.5;
+            const t = Math.random();
+            x = -1.35 + t * 0.35 + (left ? -0.25 : 0.15) + (Math.random() - 0.5) * 0.25;
+            y = 1.7 + t * 2.4;
+            z = (left ? -0.15 : 0.2) + (Math.random() - 0.5) * 0.3;
+            part = t < 0.35 ? "earInner" : "ear";
+          } else if (roll < 0.34) {
+            // eyes
+            x = -1.45 + (Math.random() - 0.5) * 0.12;
+            y = 1.05 + (Math.random() < 0.5 ? 0.12 : -0.05) + (Math.random() - 0.5) * 0.08;
+            z = 0.55 + (Math.random() - 0.5) * 0.15;
+            part = "eye";
+          } else if (roll < 0.37) {
+            // nose + whisker roots
+            x = -1.85 + (Math.random() - 0.5) * 0.2;
+            y = 0.85 + (Math.random() - 0.5) * 0.15;
+            z = 0.35 + (Math.random() - 0.5) * 0.2;
+            part = "nose";
+          } else if (roll < 0.42) {
+            // whiskers
+            const side = Math.random() < 0.5 ? 1 : -1;
+            const t = Math.random();
+            x = -1.7 - t * 0.9;
+            y = 0.85 + side * t * 0.25 + (Math.random() - 0.5) * 0.08;
+            z = 0.4 + (Math.random() - 0.5) * 0.15;
+            part = "whisker";
+          } else if (roll < 0.58) {
+            // galaxy chest / neck
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.45);
+            x = -0.25 + Math.cos(a) * r * 1.1;
+            y = 0.15 + Math.sin(a) * r * 0.95;
+            z = 0.2 + (Math.random() - 0.5) * 1.1;
+            part = Math.random() < 0.22 ? "sparkle" : "chest";
+          } else if (roll < 0.78) {
+            // fluffy body + haunch
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.5);
+            x = 0.55 + Math.cos(a) * r * 1.55;
+            y = -0.45 + Math.sin(a) * r * 1.25;
+            z = (Math.random() - 0.5) * 1.45;
+            part = Math.random() < 0.08 ? "sparkle" : "body";
+          } else if (roll < 0.86) {
+            // hind foot
+            x = 0.9 + (Math.random() - 0.5) * 0.7;
+            y = -1.7 + (Math.random() - 0.5) * 0.4;
+            z = -0.2 + (Math.random() - 0.5) * 0.55;
+            part = "foot";
+          } else if (roll < 0.92) {
+            // front paws tucked
+            x = -0.35 + (Math.random() - 0.5) * 0.7;
+            y = -1.15 + (Math.random() - 0.5) * 0.35;
+            z = 0.35 + (Math.random() - 0.5) * 0.45;
+            part = "paw";
+          } else if (roll < 0.96) {
+            // cotton tail
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.pow(Math.random(), 0.55) * 0.55;
+            x = 1.75 + Math.cos(a) * r;
+            y = -0.55 + Math.sin(a) * r;
+            z = -0.85 + (Math.random() - 0.5) * 0.45;
+            part = "tail";
+          } else {
+            // back filament / rim fur
+            x = 0.4 + (Math.random() - 0.5) * 1.2;
+            y = 0.4 + Math.random() * 1.2;
+            z = -0.9 + (Math.random() - 0.5) * 0.5;
+            part = "sparkle";
+          }
+
+          writePos(arr, i, x, y, z);
+
+          if (part === "eye") writeColor(colors, i, 0.7, 0.35, 0.12);
+          else if (part === "nose") writeColor(colors, i, 0.95, 0.65, 0.7);
+          else if (part === "earInner") writeColor(colors, i, 0.95, 0.55, 0.72);
+          else if (part === "whisker") writeColor(colors, i, 0.6, 0.15, 0.85);
+          else if (part === "sparkle") {
+            const hues = [0.08, 0.55, 0.85, 0.92, 0.12];
+            writeColor(
+              colors,
+              i,
+              hues[(Math.random() * hues.length) | 0],
+              0.85,
+              0.7 + Math.random() * 0.25
+            );
+          } else if (part === "head" || part === "ear") {
+            writeColor(colors, i, 0.9 + Math.random() * 0.04, 0.4, 0.72);
+          } else if (part === "chest") {
+            writeColor(colors, i, 0.72 + Math.random() * 0.08, 0.65, 0.55);
+          } else if (part === "tail") {
+            writeColor(colors, i, 0.6, 0.2, 0.9);
+          } else {
+            // body → sky blue pastel
+            const t = THREE.MathUtils.clamp((y + 2) / 4, 0, 1);
+            writeColor(colors, i, 0.88 - t * 0.35, 0.45 + t * 0.2, 0.62);
+          }
+        }
+      }
+
       function getTargetPositions(shapeName) {
         const arr = new Float32Array(PARTICLE_COUNT * 3);
+        shapeColorBuffer = null;
+
+        if (shapeName === "cat") {
+          shapeColorBuffer = new Float32Array(PARTICLE_COUNT * 3);
+          buildHoloCat(arr, shapeColorBuffer);
+          return arr;
+        }
+        if (shapeName === "bunny") {
+          shapeColorBuffer = new Float32Array(PARTICLE_COUNT * 3);
+          buildCosmicBunny(arr, shapeColorBuffer);
+          return arr;
+        }
+
         const fn = shapes[shapeName] || shapes.sphere;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const [x, y, z] = fn(i);
@@ -774,6 +885,11 @@
 
       function applyShapeColors() {
         const colAttr = particles.geometry.attributes.color;
+        if (shapeColorBuffer) {
+          colAttr.array.set(shapeColorBuffer);
+          colAttr.needsUpdate = true;
+          return;
+        }
         const base = shapeHue[currentShape] || 0.5;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const ix = i * 3;
