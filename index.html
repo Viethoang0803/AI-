@@ -303,7 +303,7 @@
       let exploding = false;
       let explodeUntil = 0;
       let lastExplodeTime = 0;
-      const EXPLODE_CHARGE_MS = 450;
+      const EXPLODE_CHARGE_MS = 350;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
@@ -575,18 +575,9 @@
         return n;
       }
 
-      function tipThumbAvg(lm) {
-        const tips = [8, 12, 16, 20];
-        let s = 0;
-        for (const i of tips) {
-          s += Math.hypot(lm[4].x - lm[i].x, lm[4].y - lm[i].y);
-        }
-        return s / 4;
-      }
-
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastExplodeTime < 1600) return;
+        if (now - lastExplodeTime < 1200) return;
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
@@ -676,19 +667,20 @@
         handRotY = (1 - primary[8].x) * 2 - 1;
         handRotX = (1 - primary[8].y) * 2 - 1;
 
+        // Khoảng cách cái ↔ trỏ (chuẩn hóa MediaPipe 0–1)
         const pinchDist = Math.hypot(
           primary[4].x - primary[8].x,
           primary[4].y - primary[8].y
         );
-        // Chụm cái + trỏ (ngưỡng rộng để dễ kích hoạt)
-        const isPinching = pinchDist < 0.07;
+        // Chụm: ngưỡng rộng (~9cm tương đối) để dễ kích hoạt trên webcam
+        const isPinching = pinchDist < 0.09;
 
         const indexUp = primary[8].y < primary[6].y;
         const middleUp = primary[12].y < primary[10].y;
         const ringUp = primary[16].y < primary[14].y;
         const pinkyUp = primary[20].y < primary[18].y;
         const isOpenPalm =
-          indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.1;
+          indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.08;
         const isPeace =
           indexUp && middleUp && !ringUp && !pinkyUp && !isPinching;
 
@@ -703,20 +695,22 @@
           peaceHoldMs = Math.max(0, peaceHoldMs - dt * 500);
         }
 
-        // Nổ: CHỤM cái+trỏ để TÍCH → XÒE TAY để NỔ
+        // Nổ: CHỤM cái+trỏ giữ = TÍCH → NHẢ / XÒE = NỔ
+        const justReleasedPinch = wasPinching && !isPinching;
         if (!exploding && isPinching) {
           explodeChargeMs += dt * 1000;
           if (explodeChargeMs >= EXPLODE_CHARGE_MS) {
             explodeReady = true;
             explodeChargeMs = EXPLODE_CHARGE_MS;
           }
-        } else if (explodeReady && (isOpenPalm || (!isPinching && pinchDist > 0.12))) {
-          // Nhả chụm / xòe tay → nổ
+        } else if (
+          explodeReady &&
+          (justReleasedPinch || isOpenPalm || pinchDist > 0.14)
+        ) {
+          // Nhả chụm hoặc xòe tay → nổ
           triggerExplode();
         } else if (!isPinching && !explodeReady) {
-          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
-        } else if (!isPinching && explodeReady && pinchDist < 0.12 && !isOpenPalm) {
-          // Giữ sẵn sàng nếu chưa xòe hẳn
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 500);
         }
 
         wasPinching = isPinching;
