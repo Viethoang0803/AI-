@@ -694,12 +694,21 @@
           explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
           explodeReady = false;
           wasPinching = false;
+          isFist = false;
+          isFrozen = false;
+          isPinching = false;
+          // Giữ quán tính xoay nhẹ như bản gốc khi mất tay
+          handX *= 0.92;
+          handY *= 0.92;
           statusHint.textContent = "Đưa tay vào khung webcam";
+          videoElement.style.borderColor = "rgba(255, 255, 255, 0.5)";
+          videoElement.style.boxShadow = "none";
           return;
         }
 
         const lm = results.multiHandLandmarks[0];
 
+        // Bản gốc Hand-Sync: theo đầu ngón trỏ
         handX = (1 - lm[8].x) * 2 - 1;
         handY = (1 - lm[8].y) * 2 - 1;
 
@@ -821,7 +830,6 @@
       // --- Animation Loop ---
       const clock = new THREE.Clock();
       const colorObj = new THREE.Color();
-      const tmpScale = new THREE.Vector3();
 
       function animate() {
         requestAnimationFrame(animate);
@@ -829,10 +837,6 @@
         const now = Date.now();
         const posAttr = particles.geometry.attributes.position;
         const colAttr = particles.geometry.attributes.color;
-
-        const s = isFist ? expandScale : fitScale;
-        tmpScale.set(s, s, s);
-        particles.scale.lerp(tmpScale, 0.12);
 
         if (exploding) {
           for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -851,8 +855,12 @@
             statusHint.textContent = "Đang họp lại…";
           }
         } else if (!isFrozen) {
+          // Xoay + chạy hạt đúng như Hand-Sync gốc
           particles.rotation.y += 0.003 + handX * 0.04;
           particles.rotation.x += handY * 0.02;
+
+          const s = isFist ? expandScale : fitScale;
+          particles.scale.lerp(new THREE.Vector3(s, s, s), 0.1);
 
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
