@@ -314,7 +314,7 @@
       let useWorldScale = false; // true khi nổ: vị trí theo đơn vị thế giới
       const EXPLODE_CHARGE_MS = 900;
       const EXPLODE_FLIGHT_MS = 5000;
-      const GATHER_MS = 15000;
+      const GATHER_MS = 10000;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
@@ -363,9 +363,10 @@
         c.height = 64;
         const ctx = c.getContext("2d");
         const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        g.addColorStop(0, "rgba(255,255,255,1)");
-        g.addColorStop(0.25, "rgba(255,255,255,1)");
-        g.addColorStop(0.55, "rgba(255,255,255,0.75)");
+        // Soft core — tránh đốm trắng cháy sáng
+        g.addColorStop(0, "rgba(255,255,255,0.85)");
+        g.addColorStop(0.35, "rgba(255,255,255,0.45)");
+        g.addColorStop(0.7, "rgba(255,255,255,0.12)");
         g.addColorStop(1, "rgba(255,255,255,0)");
         ctx.fillStyle = g;
         ctx.fillRect(0, 0, 64, 64);
@@ -383,10 +384,10 @@
       geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
       const material = new THREE.PointsMaterial({
-        size: isMobile ? 0.07 : 0.058,
+        size: isMobile ? 0.055 : 0.045,
         vertexColors: true,
         transparent: true,
-        opacity: 1,
+        opacity: 0.92,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         map: createDotTexture(),
@@ -561,29 +562,33 @@
         lastMorphTime = now;
       }
 
-      const COLOR_BANDS = [
-        0.0, 0.08, 0.16, 0.28, 0.4, 0.52, 0.62, 0.72, 0.82, 0.92,
+      // Bảng màu nebula hài hòa (hồng–tím–cyan–xanh) — không boost trắng
+      const COLOR_PALETTE = [
+        [0.92, 0.78, 0.42], // hồng
+        [0.84, 0.72, 0.44], // magenta
+        [0.74, 0.7, 0.46], // tím
+        [0.62, 0.72, 0.44], // xanh tím
+        [0.55, 0.75, 0.42], // indigo
+        [0.52, 0.8, 0.4], // xanh dương
+        [0.48, 0.82, 0.4], // cyan
+        [0.08, 0.7, 0.42], // san hô nhẹ
       ];
 
       function particleColor(i, x, y, z, t, out, explodeBoost) {
         const dist = Math.hypot(x, y, z);
-        const band = COLOR_BANDS[i % COLOR_BANDS.length];
-        const hue =
-          (band +
-            (i / PARTICLE_COUNT) * 0.35 +
-            dist * 0.05 +
-            t * (explodeBoost ? 0.18 : 0.07) +
-            Math.sin(i * 0.41 + t * 2) * 0.12) %
-          1;
-        const sat = explodeBoost ? 0.95 : 0.8 + 0.2 * Math.sin(i * 0.27 + t);
-        const light = explodeBoost
-          ? 0.68 + 0.25 * Math.sin(dist * 0.4 + t * 3 + i)
-          : 0.58 + 0.28 * Math.cos(dist * 1.6 + t * 1.2);
-        out.setHSL((hue + 1) % 1, sat, light);
-        const boost = explodeBoost ? 1.7 : 1.5;
-        out.r = Math.min(1, out.r * boost);
-        out.g = Math.min(1, out.g * boost);
-        out.b = Math.min(1, out.b * boost);
+        const base = COLOR_PALETTE[i % COLOR_PALETTE.length];
+        const drift =
+          Math.sin(i * 0.19 + t * 0.35) * 0.03 +
+          dist * 0.012 +
+          (explodeBoost ? Math.sin(t * 1.2 + i * 0.05) * 0.04 : 0);
+        const hue = (base[0] + drift + 1) % 1;
+        // Additive: giữ lightness thấp để không cháy trắng khi chồng hạt
+        const sat = Math.min(0.92, base[1] + (explodeBoost ? 0.08 : 0));
+        const light = Math.min(
+          explodeBoost ? 0.48 : 0.44,
+          base[2] + Math.sin(dist * 1.4 + t) * 0.04
+        );
+        out.setHSL(hue, sat, light);
       }
 
       function visibleHalfDiag() {
@@ -871,7 +876,7 @@
 
         if (exploding) {
           particles.scale.setScalar(1);
-          material.size = isMobile ? 0.09 : 0.075;
+          material.size = isMobile ? 0.065 : 0.055;
           const remain = Math.max(0, explodeUntil - now);
           const flightT = 1 - remain / EXPLODE_FLIGHT_MS;
           // Ma sát thấp → bay xa phủ hết màn hình trong 5s
@@ -907,10 +912,11 @@
             gathering = true;
             gatherUntil = now + GATHER_MS;
             gatherSpeed = 0.0025;
-            shapeNameEl.textContent = "Đang tụ lại… 15s";
+            shapeNameEl.textContent =
+              "Đang tụ lại… " + Math.round(GATHER_MS / 1000) + "s";
           }
         } else {
-          material.size = isMobile ? 0.07 : 0.058;
+          material.size = isMobile ? 0.055 : 0.045;
 
           if (gathering) {
             const remain = Math.max(0, gatherUntil - now);
