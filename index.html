@@ -308,10 +308,13 @@
       let exploding = false;
       let explodeUntil = 0;
       let lastExplodeTime = 0;
+      let gathering = false;
+      let gatherUntil = 0;
       let gatherSpeed = 0.1;
       let useWorldScale = false; // true khi nổ: vị trí theo đơn vị thế giới
       const EXPLODE_CHARGE_MS = 900;
       const EXPLODE_FLIGHT_MS = 5000;
+      const GATHER_MS = 15000;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
@@ -550,7 +553,7 @@
 
       function cycleShape() {
         const now = Date.now();
-        if (now - lastMorphTime < 1000 || exploding) return;
+        if (now - lastMorphTime < 1000 || exploding || gathering) return;
         shapeIndex = (shapeIndex + 1) % shapeList.length;
         currentShape = shapeList[shapeIndex];
         shapeNameEl.textContent = shapeNamesVi[currentShape];
@@ -622,7 +625,7 @@
 
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastExplodeTime < 5500) return;
+        if (now - lastExplodeTime < EXPLODE_FLIGHT_MS + GATHER_MS) return;
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
@@ -630,6 +633,8 @@
         exploding = true;
         useWorldScale = true;
         explodeUntil = now + EXPLODE_FLIGHT_MS;
+        gathering = false;
+        gatherUntil = 0;
         gatherSpeed = 0.022;
         shapeNameEl.textContent = "Đang nổ…";
         const pos = particles.geometry.attributes.position.array;
@@ -899,12 +904,29 @@
             "Bay tóe… " + Math.ceil(remain / 1000) + "s";
           if (now > explodeUntil) {
             exploding = false;
-            gatherSpeed = 0.02;
-            shapeNameEl.textContent = "Đang tụ lại…";
+            gathering = true;
+            gatherUntil = now + GATHER_MS;
+            gatherSpeed = 0.0025;
+            shapeNameEl.textContent = "Đang tụ lại… 15s";
           }
         } else {
           material.size = isMobile ? 0.07 : 0.058;
-          gatherSpeed = Math.min(0.1, gatherSpeed + 0.0005);
+
+          if (gathering) {
+            const remain = Math.max(0, gatherUntil - now);
+            const progress = 1 - remain / GATHER_MS;
+            // Tụ chậm trong ~15s, nhanh dần gần cuối
+            gatherSpeed = 0.0022 + progress * progress * 0.018;
+            shapeNameEl.textContent =
+              "Đang tụ lại… " + Math.ceil(remain / 1000) + "s";
+            if (remain <= 0) {
+              gatherSpeed = 0.35;
+              gathering = false;
+            }
+          } else {
+            gatherSpeed = Math.min(0.1, gatherSpeed + 0.0008);
+          }
+
           // Sau nổ: tụ về target * radius (world), rồi trả scale về radius
           const targetScale = useWorldScale ? radius : 1;
           if (useWorldScale) {
@@ -945,8 +967,12 @@
             col.array[ix + 2] = colorObj.b;
           }
 
-          // Đã tụ gần xong → chuyển lại scale bình thường
-          if (useWorldScale && maxErr < 0.12 && gatherSpeed > 0.06) {
+          // Hết 15s hoặc đã tụ gần → trả scale bình thường
+          if (
+            useWorldScale &&
+            !gathering &&
+            (maxErr < 0.15 || gatherSpeed >= 0.3)
+          ) {
             for (let i = 0; i < PARTICLE_COUNT; i++) {
               const ix = i * 3;
               const s = Math.max(radius, 0.2);
@@ -956,6 +982,7 @@
             }
             useWorldScale = false;
             particles.scale.setScalar(radius);
+            gatherSpeed = 0.1;
           }
 
           pos.needsUpdate = true;
@@ -964,12 +991,12 @@
 
         if (explodeReady) {
           shapeNameEl.textContent = "Đã tích · mở tay để nổ";
-        } else if (explodeChargeMs > 40 && !exploding) {
+        } else if (explodeChargeMs > 40 && !exploding && !gathering) {
           shapeNameEl.textContent =
             "Tích nổ " +
             Math.round((explodeChargeMs / EXPLODE_CHARGE_MS) * 100) +
             "%";
-        } else if (!exploding && gatherSpeed > 0.08) {
+        } else if (!exploding && !gathering && !useWorldScale) {
           shapeNameEl.textContent = shapeNamesVi[currentShape];
         }
 
