@@ -19,7 +19,7 @@
 | Nghiêng / xoay tay | Chỉnh góc quay vật thể |
 | Giơ ✌️ 2 ngón giữ / vẫy ngang | Đổi hình |
 | Chụm chặt cái + trỏ giữ ~1s | Tích năng lượng |
-| Nhả chụm (sau khi tích) | Nổ — bay 5s rồi tụ lại trong ~10s |
+| Nhả chụm (sau khi tích) | Nổ tự nhiên phủ màn hình, rồi tụ lại ~10s |
 
 3000 hạt, nhiều màu sáng.
 

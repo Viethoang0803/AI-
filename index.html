@@ -306,14 +306,13 @@
       let explodeChargeMs = 0;
       let explodeReady = false;
       let exploding = false;
-      let explodeUntil = 0;
+      let explodeStartTime = 0;
       let lastExplodeTime = 0;
       let gathering = false;
       let gatherUntil = 0;
       let gatherSpeed = 0.1;
       let useWorldScale = false; // true khi nổ: vị trí theo đơn vị thế giới
       const EXPLODE_CHARGE_MS = 900;
-      const EXPLODE_FLIGHT_MS = 5000;
       const GATHER_MS = 10000;
       let lastFrameTime = performance.now();
       let handCount = 0;
@@ -630,50 +629,66 @@
 
       function triggerExplode() {
         const now = Date.now();
-        if (now - lastExplodeTime < EXPLODE_FLIGHT_MS + GATHER_MS) return;
+        if (exploding || gathering) return;
+        if (now - lastExplodeTime < 2500) return;
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
         heldPinchReady = false;
         exploding = true;
         useWorldScale = true;
-        explodeUntil = now + EXPLODE_FLIGHT_MS;
+        explodeStartTime = now;
         gathering = false;
         gatherUntil = 0;
         gatherSpeed = 0.022;
         shapeNameEl.textContent = "Đang nổ…";
         const pos = particles.geometry.attributes.position.array;
         const bake = Math.max(radius, 0.35);
-        const reach = visibleHalfDiag() * 1.55;
+        const reach = visibleHalfDiag() * 1.85;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const ix = i * 3;
-          // Bake scale → đơn vị thế giới để quỹ đạo phủ hết màn hình
+          // Bake scale → đơn vị thế giới để lan khắp màn hình
           let x = pos[ix] * bake;
           let y = pos[ix + 1] * bake;
           let z = pos[ix + 2] * bake;
           pos[ix] = x;
           pos[ix + 1] = y;
           pos[ix + 2] = z;
-          let len = Math.hypot(x, y, z);
-          if (len < 0.08) {
-            const a = Math.random() * Math.PI * 2;
-            const b = Math.acos(2 * Math.random() - 1);
-            x = Math.sin(b) * Math.cos(a);
-            y = Math.sin(b) * Math.sin(a);
-            z = Math.cos(b);
-            len = 1;
+
+          // Hướng bay tự nhiên: ưu tiên mặt phẳng màn hình + hơi lệch 3D
+          const a = Math.random() * Math.PI * 2;
+          const elev = (Math.random() - 0.5) * 0.85;
+          let dx = Math.cos(a) * Math.cos(elev);
+          let dy = Math.sin(a) * Math.cos(elev);
+          let dz = Math.sin(elev) * 0.55;
+          // Pha trộn nhẹ hướng từ tâm cụm hiện tại
+          const len = Math.hypot(x, y, z);
+          if (len > 0.05) {
+            dx = dx * 0.55 + (x / len) * 0.45;
+            dy = dy * 0.55 + (y / len) * 0.45;
+            dz = dz * 0.55 + (z / len) * 0.45;
           }
-          // Vận tốc lớn + lệch góc để tóe đều màn hình
-          const power = reach * (0.045 + Math.random() * 0.055);
-          const jitter = 0.35;
-          explodeVel[ix] =
-            (x / len) * power + (Math.random() - 0.5) * power * jitter;
-          explodeVel[ix + 1] =
-            (y / len) * power + (Math.random() - 0.5) * power * jitter;
-          explodeVel[ix + 2] =
-            (z / len) * power * 0.85 + (Math.random() - 0.5) * power * jitter;
+          const dlen = Math.hypot(dx, dy, dz) || 1;
+          dx /= dlen;
+          dy /= dlen;
+          dz /= dlen;
+
+          // Xung lực ngẫu nhiên — hạt gần bay chậm, hạt mạnh bay ra sát mép
+          const burst = reach * (0.012 + Math.random() * 0.028);
+          explodeVel[ix] = dx * burst;
+          explodeVel[ix + 1] = dy * burst;
+          explodeVel[ix + 2] = dz * burst;
         }
         particles.scale.setScalar(1);
+      }
+
+      function beginGather(now) {
+        exploding = false;
+        gathering = true;
+        gatherUntil = now + GATHER_MS;
+        gatherSpeed = 0.0025;
+        shapeNameEl.textContent =
+          "Đang tụ lại… " + Math.round(GATHER_MS / 1000) + "s";
       }
 
       const tmpA = new THREE.Vector3();
@@ -877,10 +892,10 @@
         if (exploding) {
           particles.scale.setScalar(1);
           material.size = isMobile ? 0.065 : 0.055;
-          const remain = Math.max(0, explodeUntil - now);
-          const flightT = 1 - remain / EXPLODE_FLIGHT_MS;
-          // Ma sát thấp → bay xa phủ hết màn hình trong 5s
-          const drag = 0.9975 - flightT * 0.002;
+          // Ma sát nhẹ cố định — bay tự nhiên đến khi năng lượng hết / phủ màn hình
+          const drag = 0.989;
+          let speedSum = 0;
+          let distSum = 0;
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
             pos.array[ix] += explodeVel[ix];
@@ -889,6 +904,13 @@
             explodeVel[ix] *= drag;
             explodeVel[ix + 1] *= drag;
             explodeVel[ix + 2] *= drag;
+
+            speedSum += Math.hypot(
+              explodeVel[ix],
+              explodeVel[ix + 1],
+              explodeVel[ix + 2]
+            );
+            distSum += Math.hypot(pos.array[ix], pos.array[ix + 1]);
 
             particleColor(
               i,
@@ -905,15 +927,19 @@
           }
           pos.needsUpdate = true;
           col.needsUpdate = true;
-          shapeNameEl.textContent =
-            "Bay tóe… " + Math.ceil(remain / 1000) + "s";
-          if (now > explodeUntil) {
-            exploding = false;
-            gathering = true;
-            gatherUntil = now + GATHER_MS;
-            gatherSpeed = 0.0025;
-            shapeNameEl.textContent =
-              "Đang tụ lại… " + Math.round(GATHER_MS / 1000) + "s";
+          shapeNameEl.textContent = "Đang nổ…";
+
+          const avgSpeed = speedSum / PARTICLE_COUNT;
+          const avgDist = distSum / PARTICLE_COUNT;
+          const cover = visibleHalfDiag() * 0.72;
+          const elapsed = now - explodeStartTime;
+          // Kết thúc tự nhiên: đã lan rộng + chậm lại (không đếm giây cố định)
+          if (
+            (avgDist > cover && avgSpeed < 0.018) ||
+            (avgSpeed < 0.006 && elapsed > 1200) ||
+            elapsed > 22000
+          ) {
+            beginGather(now);
           }
         } else {
           material.size = isMobile ? 0.055 : 0.045;
@@ -921,7 +947,7 @@
           if (gathering) {
             const remain = Math.max(0, gatherUntil - now);
             const progress = 1 - remain / GATHER_MS;
-            // Tụ chậm trong ~15s, nhanh dần gần cuối
+            // Tụ chậm trong ~10s, nhanh dần gần cuối
             gatherSpeed = 0.0022 + progress * progress * 0.018;
             shapeNameEl.textContent =
               "Đang tụ lại… " + Math.ceil(remain / 1000) + "s";
@@ -973,7 +999,7 @@
             col.array[ix + 2] = colorObj.b;
           }
 
-          // Hết 15s hoặc đã tụ gần → trả scale bình thường
+          // Hết thời gian tụ hoặc đã tụ gần → trả scale bình thường
           if (
             useWorldScale &&
             !gathering &&
