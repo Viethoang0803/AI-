@@ -239,9 +239,9 @@
     <div id="hints">
       1 tay → quả cầu trên lòng bàn tay<br />
       2 tay → kéo xa để mở rộng<br />
-      Nghiêng / xoay tay → chỉnh góc quay<br />
-      Vẫy tay xòe → đổi hình<br />
-      Chụm cái+trỏ → tích · mở tay → nổ (5s rồi tụ)
+      Nghiêng tay → chỉnh góc quay<br />
+      ✌️ 2 ngón giữ / vẫy ngang → đổi hình<br />
+      Chụm chặt cái+trỏ giữ → tích · nhả hẳn → nổ
     </div>
 
     <div id="loading">
@@ -301,6 +301,7 @@
       let rotTargetZ = 0;
 
       let wasPinching = false;
+      let heldPinchReady = false;
       let lastMorphTime = 0;
       let explodeChargeMs = 0;
       let explodeReady = false;
@@ -308,13 +309,15 @@
       let explodeUntil = 0;
       let lastExplodeTime = 0;
       let gatherSpeed = 0.1;
-      const EXPLODE_CHARGE_MS = 350;
+      let useWorldScale = false; // true khi nổ: vị trí theo đơn vị thế giới
+      const EXPLODE_CHARGE_MS = 900;
       const EXPLODE_FLIGHT_MS = 5000;
       let lastFrameTime = performance.now();
       let handCount = 0;
       let fingerCount = 0;
       let lastPalmX = 0.5;
-      let waveVelSmooth = 0;
+      let waveTravel = 0;
+      let peaceHoldMs = 0;
       let lastWaveTime = 0;
 
       const videoEl = document.getElementById("webcam");
@@ -555,22 +558,36 @@
         lastMorphTime = now;
       }
 
-      function particleColor(i, x, y, z, t, out) {
+      const COLOR_BANDS = [
+        0.0, 0.08, 0.16, 0.28, 0.4, 0.52, 0.62, 0.72, 0.82, 0.92,
+      ];
+
+      function particleColor(i, x, y, z, t, out, explodeBoost) {
         const dist = Math.hypot(x, y, z);
+        const band = COLOR_BANDS[i % COLOR_BANDS.length];
         const hue =
-          (i / PARTICLE_COUNT * 0.85 +
-            dist * 0.12 +
-            t * 0.06 +
-            handRotY * 0.1 +
-            Math.sin(i * 0.17) * 0.08) %
+          (band +
+            (i / PARTICLE_COUNT) * 0.35 +
+            dist * 0.05 +
+            t * (explodeBoost ? 0.18 : 0.07) +
+            Math.sin(i * 0.41 + t * 2) * 0.12) %
           1;
-        const sat = 0.72 + 0.28 * Math.sin(i * 0.31 + t);
-        const light = 0.62 + 0.22 * Math.cos(dist * 2.2 + t * 1.4);
+        const sat = explodeBoost ? 0.95 : 0.8 + 0.2 * Math.sin(i * 0.27 + t);
+        const light = explodeBoost
+          ? 0.68 + 0.25 * Math.sin(dist * 0.4 + t * 3 + i)
+          : 0.58 + 0.28 * Math.cos(dist * 1.6 + t * 1.2);
         out.setHSL((hue + 1) % 1, sat, light);
-        // Tăng độ sáng cho blending additive
-        out.r = Math.min(1, out.r * 1.45);
-        out.g = Math.min(1, out.g * 1.45);
-        out.b = Math.min(1, out.b * 1.45);
+        const boost = explodeBoost ? 1.7 : 1.5;
+        out.r = Math.min(1, out.r * boost);
+        out.g = Math.min(1, out.g * boost);
+        out.b = Math.min(1, out.b * boost);
+      }
+
+      function visibleHalfDiag() {
+        const vFOV = THREE.MathUtils.degToRad(camera.fov);
+        const h = Math.tan(vFOV / 2) * camera.position.z;
+        const w = h * camera.aspect;
+        return Math.hypot(w, h);
       }
 
       function landmarkToWorld(x, y, out) {
@@ -609,18 +626,26 @@
         lastExplodeTime = now;
         explodeChargeMs = 0;
         explodeReady = false;
+        heldPinchReady = false;
         exploding = true;
+        useWorldScale = true;
         explodeUntil = now + EXPLODE_FLIGHT_MS;
-        gatherSpeed = 0.028;
+        gatherSpeed = 0.022;
         shapeNameEl.textContent = "Đang nổ…";
         const pos = particles.geometry.attributes.position.array;
+        const bake = Math.max(radius, 0.35);
+        const reach = visibleHalfDiag() * 1.55;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
           const ix = i * 3;
-          let x = pos[ix];
-          let y = pos[ix + 1];
-          let z = pos[ix + 2];
+          // Bake scale → đơn vị thế giới để quỹ đạo phủ hết màn hình
+          let x = pos[ix] * bake;
+          let y = pos[ix + 1] * bake;
+          let z = pos[ix + 2] * bake;
+          pos[ix] = x;
+          pos[ix + 1] = y;
+          pos[ix + 2] = z;
           let len = Math.hypot(x, y, z);
-          if (len < 0.05) {
+          if (len < 0.08) {
             const a = Math.random() * Math.PI * 2;
             const b = Math.acos(2 * Math.random() - 1);
             x = Math.sin(b) * Math.cos(a);
@@ -628,12 +653,17 @@
             z = Math.cos(b);
             len = 1;
           }
-          // Vận tốc mạnh để bay phủ màn hình trong ~5s
-          const power = (0.18 + Math.random() * 0.28) * Math.max(radius, 0.45);
-          explodeVel[ix] = (x / len) * power + (Math.random() - 0.5) * 0.06;
-          explodeVel[ix + 1] = (y / len) * power + (Math.random() - 0.5) * 0.06;
-          explodeVel[ix + 2] = (z / len) * power + (Math.random() - 0.5) * 0.06;
+          // Vận tốc lớn + lệch góc để tóe đều màn hình
+          const power = reach * (0.045 + Math.random() * 0.055);
+          const jitter = 0.35;
+          explodeVel[ix] =
+            (x / len) * power + (Math.random() - 0.5) * power * jitter;
+          explodeVel[ix + 1] =
+            (y / len) * power + (Math.random() - 0.5) * power * jitter;
+          explodeVel[ix + 2] =
+            (z / len) * power * 0.85 + (Math.random() - 0.5) * power * jitter;
         }
+        particles.scale.setScalar(1);
       }
 
       const tmpA = new THREE.Vector3();
@@ -661,10 +691,12 @@
 
         if (handCount === 0) {
           fingerCount = 0;
-          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 400);
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 900);
           explodeReady = false;
+          heldPinchReady = false;
           wasPinching = false;
-          waveVelSmooth *= 0.85;
+          waveTravel *= 0.85;
+          peaceHoldMs = Math.max(0, peaceHoldMs - dt * 500);
           radiusTarget = THREE.MathUtils.lerp(radiusTarget, 0.55, 0.05);
           palmPosTarget.set(0, 0, 0);
           handRotX *= 0.92;
@@ -721,48 +753,73 @@
           primary[4].x - primary[8].x,
           primary[4].y - primary[8].y
         );
-        const isPinching = pinchDist < 0.09;
 
         const indexUp = primary[8].y < primary[6].y;
         const middleUp = primary[12].y < primary[10].y;
         const ringUp = primary[16].y < primary[14].y;
         const pinkyUp = primary[20].y < primary[18].y;
         const isOpenPalm =
-          indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.08;
+          indexUp && middleUp && ringUp && pinkyUp && pinchDist > 0.1;
+        // Chụm chặt thật: tip gần + không xòe cả bàn tay
+        const isPinching =
+          pinchDist < 0.042 && !isOpenPalm && fingerCount <= 2;
 
-        // Vẫy tay (xòe) nhanh → đổi hình
-        const palmX = mid.x;
-        const vx = (palmX - lastPalmX) / Math.max(dt, 0.008);
-        waveVelSmooth = waveVelSmooth * 0.55 + vx * 0.45;
-        lastPalmX = palmX;
-        if (
-          isOpenPalm &&
-          handCount === 1 &&
-          !isPinching &&
-          !exploding &&
-          Math.abs(waveVelSmooth) > 2.2 &&
-          Date.now() - lastWaveTime > 900
-        ) {
-          cycleShape();
-          lastWaveTime = Date.now();
-          waveVelSmooth = 0;
+        const isPeace =
+          indexUp &&
+          middleUp &&
+          !ringUp &&
+          !pinkyUp &&
+          pinchDist > 0.07 &&
+          !isPinching;
+
+        // Đổi hình: giơ ✌️ giữ ~0.55s (ổn định)
+        if (isPeace && handCount === 1 && !exploding && !explodeReady) {
+          peaceHoldMs += dt * 1000;
+          if (peaceHoldMs > 550) {
+            cycleShape();
+            peaceHoldMs = -700;
+          }
+        } else {
+          peaceHoldMs = Math.max(0, peaceHoldMs - dt * 450);
         }
 
-        // Nổ: CHỤM cái+trỏ giữ = TÍCH → NHẢ / XÒE = NỔ
-        const justReleasedPinch = wasPinching && !isPinching;
+        // Đổi hình phụ: vẫy ngang khi xòe ≥3 ngón
+        const palmX = mid.x;
+        const dx = Math.abs(palmX - lastPalmX);
+        lastPalmX = palmX;
+        if (
+          fingerCount >= 3 &&
+          !isPinching &&
+          !exploding &&
+          !explodeReady &&
+          handCount === 1 &&
+          !isPeace
+        ) {
+          waveTravel += dx;
+          if (waveTravel > 0.28 && Date.now() - lastWaveTime > 1100) {
+            cycleShape();
+            lastWaveTime = Date.now();
+            waveTravel = 0;
+          }
+        } else {
+          waveTravel *= 0.88;
+        }
+
+        // Nổ: CHỤM CHẶT giữ ~0.9s → NHẢ ngón (tách > ngưỡng) mới nổ
+        // Không nổ khi chỉ xòe tay / vẫy / đổi hình
         if (!exploding && isPinching) {
           explodeChargeMs += dt * 1000;
           if (explodeChargeMs >= EXPLODE_CHARGE_MS) {
             explodeReady = true;
+            heldPinchReady = true;
             explodeChargeMs = EXPLODE_CHARGE_MS;
           }
-        } else if (
-          explodeReady &&
-          (justReleasedPinch || isOpenPalm || pinchDist > 0.14)
-        ) {
+        } else if (heldPinchReady && !isPinching && pinchDist > 0.11) {
+          heldPinchReady = false;
           triggerExplode();
-        } else if (!isPinching && !explodeReady) {
-          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 500);
+        } else if (!isPinching && !heldPinchReady) {
+          explodeChargeMs = Math.max(0, explodeChargeMs - dt * 1000);
+          if (explodeChargeMs < 80) explodeReady = false;
         }
 
         wasPinching = isPinching;
@@ -796,10 +853,9 @@
         const col = particles.geometry.attributes.color;
 
         // Mượt theo lòng bàn tay
-        palmPos.lerp(palmPosTarget, 0.22);
+        palmPos.lerp(palmPosTarget, exploding ? 0.06 : 0.22);
         radius += (radiusTarget - radius) * 0.14;
         particles.position.copy(palmPos);
-        particles.scale.setScalar(radius);
 
         // Xoay theo tay (có thể chỉnh) + spin nhẹ nền
         particles.rotation.x +=
@@ -809,10 +865,12 @@
         particles.rotation.z += (rotTargetZ - particles.rotation.z) * 0.1;
 
         if (exploding) {
+          particles.scale.setScalar(1);
+          material.size = isMobile ? 0.09 : 0.075;
           const remain = Math.max(0, explodeUntil - now);
           const flightT = 1 - remain / EXPLODE_FLIGHT_MS;
-          // Giảm ma sát dần để hạt còn bay xa tới hết 5s
-          const drag = 0.994 - flightT * 0.004;
+          // Ma sát thấp → bay xa phủ hết màn hình trong 5s
+          const drag = 0.9975 - flightT * 0.002;
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
             pos.array[ix] += explodeVel[ix];
@@ -828,7 +886,8 @@
               pos.array[ix + 1],
               pos.array[ix + 2],
               t,
-              colorObj
+              colorObj,
+              true
             );
             col.array[ix] = colorObj.r;
             col.array[ix + 1] = colorObj.g;
@@ -840,20 +899,37 @@
             "Bay tóe… " + Math.ceil(remain / 1000) + "s";
           if (now > explodeUntil) {
             exploding = false;
-            gatherSpeed = 0.028;
+            gatherSpeed = 0.02;
             shapeNameEl.textContent = "Đang tụ lại…";
           }
         } else {
-          gatherSpeed = Math.min(0.1, gatherSpeed + 0.00055);
+          material.size = isMobile ? 0.07 : 0.058;
+          gatherSpeed = Math.min(0.1, gatherSpeed + 0.0005);
+          // Sau nổ: tụ về target * radius (world), rồi trả scale về radius
+          const targetScale = useWorldScale ? radius : 1;
+          if (useWorldScale) {
+            particles.scale.setScalar(1);
+          } else {
+            particles.scale.setScalar(radius);
+          }
+
+          let maxErr = 0;
           for (let i = 0; i < PARTICLE_COUNT; i++) {
             const ix = i * 3;
-            pos.array[ix] += (targetPositions[ix] - pos.array[ix]) * gatherSpeed;
-            pos.array[ix + 1] +=
-              (targetPositions[ix + 1] - pos.array[ix + 1]) * gatherSpeed;
-            pos.array[ix + 2] +=
-              (targetPositions[ix + 2] - pos.array[ix + 2]) * gatherSpeed;
+            const tx = targetPositions[ix] * targetScale;
+            const ty = targetPositions[ix + 1] * targetScale;
+            const tz = targetPositions[ix + 2] * targetScale;
+            pos.array[ix] += (tx - pos.array[ix]) * gatherSpeed;
+            pos.array[ix + 1] += (ty - pos.array[ix + 1]) * gatherSpeed;
+            pos.array[ix + 2] += (tz - pos.array[ix + 2]) * gatherSpeed;
             pos.array[ix] += Math.sin(t * 0.8 + i) * 0.0015;
             pos.array[ix + 1] += Math.cos(t * 0.8 + i) * 0.0015;
+
+            maxErr = Math.max(
+              maxErr,
+              Math.abs(tx - pos.array[ix]),
+              Math.abs(ty - pos.array[ix + 1])
+            );
 
             particleColor(
               i,
@@ -861,12 +937,27 @@
               pos.array[ix + 1],
               pos.array[ix + 2],
               t,
-              colorObj
+              colorObj,
+              false
             );
             col.array[ix] = colorObj.r;
             col.array[ix + 1] = colorObj.g;
             col.array[ix + 2] = colorObj.b;
           }
+
+          // Đã tụ gần xong → chuyển lại scale bình thường
+          if (useWorldScale && maxErr < 0.12 && gatherSpeed > 0.06) {
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+              const ix = i * 3;
+              const s = Math.max(radius, 0.2);
+              pos.array[ix] /= s;
+              pos.array[ix + 1] /= s;
+              pos.array[ix + 2] /= s;
+            }
+            useWorldScale = false;
+            particles.scale.setScalar(radius);
+          }
+
           pos.needsUpdate = true;
           col.needsUpdate = true;
         }
